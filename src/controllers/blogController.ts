@@ -119,28 +119,8 @@ const deleteBlogPost = asyncHandler(
   }
 );
 
-// Search blog posts by title or description
-// const searchBlogPosts = asyncHandler(
-//   async (req: Request, res: Response): Promise<void> => {
-//     const { query } = req.query; // Get the search query from query parameters
-
-//     // Validate incoming query
-//     if (!query) {
-//       res.status(400).json({ message: "Search query is required" });
-//       return;
-//     }
-
-//     // Search in the title and description
-//     const blogPosts = await BlogPost.find({
-//       $or: [
-//         { title: { $regex: query, $options: "i" } }, // Case-insensitive search in title
-//         { description: { $regex: query, $options: "i" } }, // Case-insensitive search in description
-//       ],
-//     });
-
-//     res.status(200).json(blogPosts); // Send the found blog posts as a response
-//   }
-// );
+ 
+ 
 
 export {
   createBlogPost,
@@ -148,5 +128,5 @@ export {
   getBlogPostById,
   updateBlogPost,
   deleteBlogPost,
-  // searchBlogPosts,
+  
 };
