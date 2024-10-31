@@ -5,7 +5,6 @@ import cors from "cors";
 import bodyParser from "body-parser";
 import connectDB from "./config/db";
 import blogRoutes from "./routes/blogRoutes";
-import path from "path";
 import authRoutes from "./routes/adminRoutes";
 
 connectDB();
