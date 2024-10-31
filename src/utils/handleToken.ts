@@ -11,7 +11,7 @@ interface TokenHandler {
 const tokenHandler: TokenHandler = {
   generateToken: (fieldToSecure, duration) => {
     try {
-      const secret = process.env.JWT_SECRET_KEY as string;
+      const secret = process.env.JWT_SECRET as string;
       if (!secret) throw new Error("JWT secret key is missing");
 
       // console.log("JWT Secret Key for signing:", secret);
@@ -26,7 +26,7 @@ const tokenHandler: TokenHandler = {
 
   decodeToken: (token) => {
     try {
-      const secret = process.env.JWT_SECRET_KEY as string;
+      const secret = process.env.JWT_SECRET as string;
       if (!secret) throw new Error("JWT secret key is missing");
       // console.log("JWT Secret Key for verifying:", secret);
 
