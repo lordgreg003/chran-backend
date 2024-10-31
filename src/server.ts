@@ -1,8 +1,8 @@
 import express, { Application } from "express";
 import dotenv from "dotenv";
+dotenv.config();
 import cors from "cors";
 import bodyParser from "body-parser";
-dotenv.config({ path: path.resolve(__dirname, "../.env") });
 import connectDB from "./config/db";
 import blogRoutes from "./routes/blogRoutes";
 import path from "path";
