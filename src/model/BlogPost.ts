@@ -3,8 +3,6 @@ import mongoose, { Document, Schema } from "mongoose";
 // Define a TypeScript interface for the BlogPost model
 interface IBlogPost extends Document {
   title: string;
-  username: string;
-  password: string;
   description: string;
   image?: string;
   video?: string;
@@ -18,8 +16,6 @@ const BlogPostSchema: Schema = new Schema({
   description: { type: String, required: true },
   image: { type: String, default: null },
   video: { type: String, default: null },
-  username: { type: String, required: true },
-  password: { type: String, required: true },
   likes: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now },
 });

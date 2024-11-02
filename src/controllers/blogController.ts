@@ -119,14 +119,10 @@ const deleteBlogPost = asyncHandler(
   }
 );
 
- 
- 
-
 export {
   createBlogPost,
   getAllBlogPosts,
   getBlogPostById,
   updateBlogPost,
   deleteBlogPost,
-  
 };
