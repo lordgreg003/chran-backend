@@ -1,25 +1,19 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, { Schema, Document } from "mongoose";
 
-// Define a TypeScript interface for the BlogPost model
 interface IBlogPost extends Document {
   title: string;
   description: string;
-  image?: string;
-  video?: string;
-  likes: number;
+  mediaUrl: string;
+  mediaType: string; // Either "image" or "video"
   createdAt: Date;
 }
 
-// Define the Mongoose schema
 const BlogPostSchema: Schema = new Schema({
   title: { type: String, required: true },
   description: { type: String, required: true },
-  image: { type: String, default: null },
-  video: { type: String, default: null },
-  likes: { type: Number, default: 0 },
+  mediaUrl: { type: String },
+  mediaType: { type: String },
   createdAt: { type: Date, default: Date.now },
 });
 
-// Export the model and interface
-const BlogPost = mongoose.model<IBlogPost>("BlogPost", BlogPostSchema);
-export { BlogPost, IBlogPost };
+export const BlogPost = mongoose.model<IBlogPost>("BlogPost", BlogPostSchema);
