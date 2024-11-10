@@ -36,7 +36,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 exports.__esModule = true;
-exports.updateBlogPost = exports.getBlogPostById = exports.getAllBlogPosts = exports.createBlogPost = void 0;
+exports.deleteBlogPost = exports.getBlogPostById = exports.getAllBlogPosts = exports.createBlogPost = void 0;
 var express_async_handler_1 = require("express-async-handler");
 var BlogPost_1 = require("../model/BlogPost");
 var cloudinary_1 = require("../config/cloudinary");
@@ -56,7 +56,16 @@ var createBlogPost = express_async_handler_1["default"](function (req, res) { re
                         var _a;
                         var uploadStream = cloudinary_1["default"].uploader.upload_stream({
                             resource_type: "auto",
-                            folder: "blog_posts"
+                            folder: "blog_posts",
+                            transformation: [
+                                {
+                                    width: 300,
+                                    height: 300,
+                                    crop: "limit",
+                                    quality: "auto:best",
+                                    fetch_format: "auto"
+                                },
+                            ]
                         }, function (error, result) {
                             if (error) {
                                 return reject(new Error("Error uploading file to Cloudinary"));
@@ -70,7 +79,7 @@ var createBlogPost = express_async_handler_1["default"](function (req, res) { re
                         });
                         // Stream the file buffer to Cloudinary
                         var bufferStream = new stream.PassThrough();
-                        bufferStream.end((_a = req.file) === null || _a === void 0 ? void 0 : _a.buffer); // Use optional chaining to handle undefined
+                        bufferStream.end((_a = req.file) === null || _a === void 0 ? void 0 : _a.buffer);
                         bufferStream.pipe(uploadStream);
                     });
                 };
@@ -164,33 +173,86 @@ var getBlogPostById = express_async_handler_1["default"](function (req, res) { r
 }); });
 exports.getBlogPostById = getBlogPostById;
 // Update a blog post by ID
-var updateBlogPost = express_async_handler_1["default"](function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
-    var id, _a, title, description, image, video, post, updatedPost;
+// const updateBlogPost: RequestHandler = asyncHandler(
+//   async (req: Request, res: Response): Promise<void> => {
+//     try {
+//       // Extract the blog post ID and the updated data from the request
+//       const { id } = req.params;
+//       const { title, description, mediaUrl, mediaType } = req.body;
+//       // Log the received data
+//       console.log('Updating post with ID:', id);
+//       console.log('Updated data:', { title, description, mediaUrl, mediaType });
+//       // Find the blog post by ID
+//       const post = await BlogPost.findById(id);
+//       // Check if the post exists
+//       if (!post) {
+//         res.status(404).json({ message: "Blog post not found" });
+//         return;
+//       }
+//       // If there is media to update, delete the existing media from Cloudinary (if it exists)
+//       if (mediaUrl && post.mediaUrl !== mediaUrl) {
+//         const publicId = post.mediaUrl.split("/").pop()?.split(".")[0]; // Extract the public ID
+//         if (publicId) {
+//           await cloudinary.uploader.destroy(publicId); // Delete the previous media
+//         }
+//       }
+//       // Update the blog post fields with the new data
+//       post.title = title || post.title;  // Keep existing title if no new one is provided
+//       post.description = description || post.description;  // Same for description
+//       post.mediaUrl = mediaUrl || post.mediaUrl;  // Update media URL if provided
+//       post.mediaType = mediaType || post.mediaType;  // Update media type if provided
+//       // Save the updated post
+//       await post.save();
+//       // Respond with the updated blog post
+//       res.status(200).json({ message: "Blog post updated successfully", updatedPost: post });
+//     } catch (error) {
+//       console.error('Error updating blog post:', error);
+//       res.status(500).json({ error: "Error updating blog post" });
+//     }
+//   }
+// );
+// Delete blog post by ID
+var deleteBlogPost = express_async_handler_1["default"](function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
+    var id, post, publicId, error_4;
+    var _a;
     return __generator(this, function (_b) {
         switch (_b.label) {
             case 0:
+                _b.trys.push([0, 5, , 6]);
                 id = req.params.id;
-                _a = req.body, title = _a.title, description = _a.description, image = _a.image, video = _a.video;
-                // Validate incoming data
-                if (!title && !description && !image && !video) {
-                    res.status(400).json({
-                        message: "At least one field (title, description, image, video) must be provided to update."
-                    });
-                    return [2 /*return*/]; // Exit the function if no fields are provided
-                }
+                console.log('Looking for post with ID:', id);
                 return [4 /*yield*/, BlogPost_1.BlogPost.findById(id)];
             case 1:
                 post = _b.sent();
                 if (!post) {
                     res.status(404).json({ message: "Blog post not found" });
-                    return [2 /*return*/]; // Exit if the post doesn't exist
+                    return [2 /*return*/];
                 }
-                return [4 /*yield*/, post.save()];
+                console.log('Post found:', post);
+                if (!post.mediaUrl) return [3 /*break*/, 3];
+                publicId = (_a = post.mediaUrl.split("/").pop()) === null || _a === void 0 ? void 0 : _a.split(".")[0];
+                console.log('Deleting media with publicId:', publicId);
+                if (!publicId) return [3 /*break*/, 3];
+                return [4 /*yield*/, cloudinary_1["default"].uploader.destroy(publicId)];
             case 2:
-                updatedPost = _b.sent();
-                res.status(200).json(updatedPost); // Send response with updated blog post
-                return [2 /*return*/];
+                _b.sent();
+                _b.label = 3;
+            case 3: 
+            // Delete the blog post from MongoDB
+            return [4 /*yield*/, BlogPost_1.BlogPost.findByIdAndDelete(id)];
+            case 4:
+                // Delete the blog post from MongoDB
+                _b.sent();
+                // Send a success response
+                res.status(200).json({ message: "Blog post and media deleted successfully" });
+                return [3 /*break*/, 6];
+            case 5:
+                error_4 = _b.sent();
+                console.error('Error deleting blog post:', error_4);
+                res.status(500).json({ error: "Error deleting blog post" });
+                return [3 /*break*/, 6];
+            case 6: return [2 /*return*/];
         }
     });
 }); });
-exports.updateBlogPost = updateBlogPost;
+exports.deleteBlogPost = deleteBlogPost;

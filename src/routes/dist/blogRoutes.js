@@ -10,9 +10,9 @@ router.post("/", multerConfig_1.upload.single("media"), blogController_1.createB
 // Route to get all blog posts
 router.get("/", blogController_1.getAllBlogPosts);
 router.get("/:id", blogController_1.getBlogPostById);
-router.put("/:id", blogController_1.updateBlogPost);
+router.put("/:id", multerConfig_1.upload.single('media'), blogController_1.updateBlogPost);
 // Route to delete a blog post by ID
-// router.delete("/:id", deleteBlogPost);
+router["delete"]("/:id", blogController_1.deleteBlogPost);
 // Search for blog posts
 // router.get("/search", searchBlogPosts);
 exports["default"] = router;
