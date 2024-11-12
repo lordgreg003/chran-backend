@@ -239,8 +239,8 @@ var deleteBlogPost = express_async_handler_1["default"](function (req, res) { re
                     return [2 /*return*/];
                 }
                 console.log("Post found:", post);
-                if (!post.mediaUrl) return [3 /*break*/, 3];
-                publicId = (_a = post.mediaUrl.split("/").pop()) === null || _a === void 0 ? void 0 : _a.split(".")[0];
+                if (!post.media) return [3 /*break*/, 3];
+                publicId = (_a = post.media.split("/").pop()) === null || _a === void 0 ? void 0 : _a.split(".")[0];
                 console.log("Deleting media with publicId:", publicId);
                 if (!publicId) return [3 /*break*/, 3];
                 return [4 /*yield*/, cloudinary_1["default"].uploader.destroy(publicId)];

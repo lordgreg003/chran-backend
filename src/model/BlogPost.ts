@@ -3,7 +3,7 @@ import mongoose, { Schema, Document } from "mongoose";
 interface IBlogPost extends Document {
   title: string;
   description: string;
-  mediaUrl: string;
+  media: string;
   mediaType: string; // Either "image" or "video"
   createdAt: Date;
 }
