@@ -11,7 +11,12 @@ interface IBlogPost extends Document {
 const BlogPostSchema: Schema = new Schema({
   title: { type: String, required: true },
   description: { type: String, required: true },
-  mediaUrl: { type: String },
+  media: [
+    {
+      url: { type: String },
+      type: { type: String }, // Either "image" or "video"
+    },
+  ],
   mediaType: { type: String },
   createdAt: { type: Date, default: Date.now },
 });
