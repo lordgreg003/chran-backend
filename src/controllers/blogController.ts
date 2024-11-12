@@ -178,8 +178,8 @@ const deleteBlogPost: RequestHandler = asyncHandler(
       console.log("Post found:", post);
 
       // If media exists, delete it from Cloudinary
-      if (post.mediaUrl) {
-        const publicId = post.mediaUrl.split("/").pop()?.split(".")[0];
+      if (post.media) {
+        const publicId = post.media.split("/").pop()?.split(".")[0];
         console.log("Deleting media with publicId:", publicId);
 
         if (publicId) {
