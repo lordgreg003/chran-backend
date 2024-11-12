@@ -9,80 +9,69 @@ const createBlogPost: RequestHandler = asyncHandler(async (req, res) => {
   try {
     const { title, description } = req.body;
 
-    // Initialize variables for media URL and type
-    let mediaUrl = "";
-    let mediaType = "";
+    // Array to store media URLs and types
+    const media = [];
 
-    if (req.file) {
-      // Convert the Cloudinary upload to a Promise to await it
-      const uploadToCloudinary = () => {
-        return new Promise<{ mediaUrl: string; mediaType: string }>(
+    if (req.files && Array.isArray(req.files)) {
+      for (const file of req.files) {
+        // Upload to Cloudinary with resource type auto
+        const uploadResult = await new Promise<{ url: string; type: string }>(
           (resolve, reject) => {
             const uploadStream = cloudinary.uploader.upload_stream(
               {
-                resource_type: "auto",
+                resource_type: "auto", // Automatically handle images and videos
                 folder: "blog_posts",
-                transformation: [
-                  {
-                    width: 300,
-                    height: 300,
-                    crop: "limit",
-                    quality: "auto:best",
-                    fetch_format: "auto",
-                  },
-                ],
+                transformation: file.mimetype.startsWith("image")
+                  ? [
+                      {
+                        width: 300,
+                        height: 300,
+                        crop: "limit",
+                        quality: "auto:best",
+                      },
+                    ]
+                  : undefined, // Optional: Add video transformations if needed
               },
               (error, result) => {
                 if (error) {
-                  return reject(
-                    new Error("Error uploading file to Cloudinary")
-                  );
+                  return reject(new Error("Failed to upload to Cloudinary"));
                 }
                 if (result) {
                   resolve({
-                    mediaUrl: result.secure_url,
-                    mediaType: result.resource_type,
+                    url: result.secure_url,
+                    type: result.resource_type,
                   });
                 }
               }
             );
 
-            // Stream the file buffer to Cloudinary
             const bufferStream = new stream.PassThrough();
-            bufferStream.end(req.file?.buffer);
+            bufferStream.end(file.buffer);
             bufferStream.pipe(uploadStream);
           }
         );
-      };
 
-      // Await the Cloudinary upload and set mediaUrl and mediaType
-      const uploadResult = await uploadToCloudinary();
-      mediaUrl = uploadResult.mediaUrl;
-      mediaType = uploadResult.mediaType;
+        // Add the uploaded media info to the media array
+        media.push(uploadResult);
+      }
     }
 
-    // Create a new blog post instance with media URL and type
+    // Create a new blog post
     const newPost = new BlogPost({
       title,
       description,
-      mediaUrl,
-      mediaType,
+      media, // Save the array of media objects
     });
 
-    // Save the new post to MongoDB
+    // Save to MongoDB
     await newPost.save();
 
-    // Respond with success
-    res
-      .status(201)
-      .json({ message: "Blog post created successfully", newPost });
+    res.status(201).json({ message: "Blog post created successfully", newPost });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error creating blog post" });
   }
 });
-
-
 // Get all blog posts
 const getAllBlogPosts: RequestHandler = asyncHandler(async (req, res) => {
   try {
@@ -176,7 +165,7 @@ const deleteBlogPost: RequestHandler = asyncHandler(
       // Extract the post ID from the URL parameters
       const { id } = req.params;
 
-      console.log('Looking for post with ID:', id);
+      console.log("Looking for post with ID:", id);
 
       // Check if the post exists
       const post = await BlogPost.findById(id);
@@ -186,13 +175,13 @@ const deleteBlogPost: RequestHandler = asyncHandler(
         return;
       }
 
-      console.log('Post found:', post);
+      console.log("Post found:", post);
 
       // If media exists, delete it from Cloudinary
       if (post.mediaUrl) {
         const publicId = post.mediaUrl.split("/").pop()?.split(".")[0];
-        console.log('Deleting media with publicId:', publicId);
-        
+        console.log("Deleting media with publicId:", publicId);
+
         if (publicId) {
           await cloudinary.uploader.destroy(publicId);
         }
@@ -202,14 +191,15 @@ const deleteBlogPost: RequestHandler = asyncHandler(
       await BlogPost.findByIdAndDelete(id);
 
       // Send a success response
-      res.status(200).json({ message: "Blog post and media deleted successfully" });
+      res
+        .status(200)
+        .json({ message: "Blog post and media deleted successfully" });
     } catch (error) {
-      console.error('Error deleting blog post:', error);
+      console.error("Error deleting blog post:", error);
       res.status(500).json({ error: "Error deleting blog post" });
     }
   }
 );
-
 
 export {
   createBlogPost,

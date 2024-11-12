@@ -12,7 +12,7 @@ import { upload } from "../config/multerConfig";
 const router = express.Router();
 
 // Routes for blog posts
-router.post("/", upload.single("media"), createBlogPost); // Admin: Create a new blog post
+router.post("/", upload.array("media", 3), createBlogPost);
 
 // Route to get all blog posts
 router.get("/", getAllBlogPosts);
