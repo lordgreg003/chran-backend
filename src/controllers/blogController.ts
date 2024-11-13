@@ -87,25 +87,29 @@ const createBlogPost: RequestHandler = asyncHandler(async (req, res) => {
 const getAllBlogPosts: RequestHandler = asyncHandler(async (req, res) => {
   try {
     // Pagination logic
+    const searchRegex = new RegExp(req.query.search as string, "i");
     const page = parseInt(req.query.page as string) || 1;  // Default to page 1 if not provided
     const limit = parseInt(req.query.limit as string) || 10;  // Default to 10 posts per page
     const skip = (page - 1) * limit;  // Calculate the number of posts to skip for pagination
 
-    // Calculate start and end of the week to filter posts by the current week using date-fns
-    const startOfCurrentWeek = startOfWeek(new Date(), { weekStartsOn: 0 });  // Sunday as the start of the week
-    const endOfCurrentWeek = endOfWeek(new Date(), { weekStartsOn: 0 });  // Sunday as the start of the week
-
-    // Fetch the blog posts for the current week, sorted by createdAt (newest first)
+    // Fetch blog posts matching the search term
     const blogPosts = await BlogPost.find({
-      createdAt: { $gte: startOfCurrentWeek, $lte: endOfCurrentWeek }, // Filter for current week
+      $or: [
+        { title: { $regex: searchRegex } },
+        { content: { $regex: searchRegex } },
+        { tags: { $regex: searchRegex } },
+      ],
     })
-      .sort({ createdAt: -1 }) // Sort by creation date, newest first
-      .skip(skip)
-      .limit(limit);
+      .skip(skip)  // Skip the number of items based on the current page
+      .limit(limit);  // Limit the number of items per page
 
-    // Calculate the total number of blog posts for pagination
+    // Count the total number of blog posts for pagination
     const totalBlogPosts = await BlogPost.countDocuments({
-      createdAt: { $gte: startOfCurrentWeek, $lte: endOfCurrentWeek }, // Same filter for counting
+      $or: [
+        { title: { $regex: searchRegex } },
+        { content: { $regex: searchRegex } },
+        { tags: { $regex: searchRegex } },
+      ],
     });
 
     // Calculate the total number of pages
@@ -126,6 +130,7 @@ const getAllBlogPosts: RequestHandler = asyncHandler(async (req, res) => {
     res.status(500).json({ error: "Error fetching blog posts" });
   }
 });
+
 
 // Get a blog post by ID
 const getBlogPostById = asyncHandler(
