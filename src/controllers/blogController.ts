@@ -4,7 +4,7 @@ import asyncHandler from "express-async-handler";
 import { BlogPost } from "../model/BlogPost";
 import cloudinary from "../config/cloudinary";
 import * as stream from "stream";
-import { startOfWeek, endOfWeek } from 'date-fns';  // Import date-fns methods
+import { startOfWeek, endOfWeek } from "date-fns"; // Import date-fns methods
 
 interface MediaItem {
   url: string;
@@ -77,60 +77,74 @@ const createBlogPost: RequestHandler = asyncHandler(async (req, res) => {
     // Save to MongoDB
     await newPost.save();
 
-    res.status(201).json({ message: "Blog post created successfully", newPost });
+    res
+      .status(201)
+      .json({ message: "Blog post created successfully", newPost });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error creating blog post" });
   }
 });
 // Get all blog posts
-const getAllBlogPosts: RequestHandler = asyncHandler(async (req, res) => {
-  try {
-    // Pagination logic
-    const searchRegex = new RegExp(req.query.search as string, "i");
-    const page = parseInt(req.query.page as string) || 1;  // Default to page 1 if not provided
-    const limit = parseInt(req.query.limit as string) || 10;  // Default to 10 posts per page
-    const skip = (page - 1) * limit;  // Calculate the number of posts to skip for pagination
-
-    // Fetch blog posts matching the search term
-    const blogPosts = await BlogPost.find({
-      $or: [
-        { title: { $regex: searchRegex } },
-        { content: { $regex: searchRegex } },
-        { tags: { $regex: searchRegex } },
-      ],
-    })
-      .skip(skip)  // Skip the number of items based on the current page
-      .limit(limit);  // Limit the number of items per page
-
-    // Count the total number of blog posts for pagination
-    const totalBlogPosts = await BlogPost.countDocuments({
-      $or: [
-        { title: { $regex: searchRegex } },
-        { content: { $regex: searchRegex } },
-        { tags: { $regex: searchRegex } },
-      ],
-    });
-
-    // Calculate the total number of pages
-    const totalPages = Math.ceil(totalBlogPosts / limit);
-
-    // Send the response with the paginated blog posts
-    res.status(200).json({
-      message: "Blog posts retrieved successfully",
-      blogPosts,
-      pagination: {
-        currentPage: page,
-        totalPages,
-        totalBlogPosts,
-      },
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Error fetching blog posts" });
+const getAllBlogPosts = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const blogPosts = await BlogPost.find(); // Fetch all blog posts from the database
+      res.status(200).json(blogPosts); // Send back the blog posts as a response
+    } catch (error: any) {
+      console.error("Error fetching blog posts:", error);
+      res
+        .status(500)
+        .json({ message: "Error fetching blog posts", error: error.message });
+    }
   }
-});
+);
+// const getAllBlogPosts: RequestHandler = asyncHandler(async (req, res) => {
+//   try {
+//     // Pagination logic
+//     const searchRegex = new RegExp(req.query.search as string, "i");
+//     const page = parseInt(req.query.page as string) || 1;  // Default to page 1 if not provided
+//     const limit = parseInt(req.query.limit as string) || 10;  // Default to 10 posts per page
+//     const skip = (page - 1) * limit;  // Calculate the number of posts to skip for pagination
 
+//     // Fetch blog posts matching the search term
+//     const blogPosts = await BlogPost.find({
+//       $or: [
+//         { title: { $regex: searchRegex } },
+//         { content: { $regex: searchRegex } },
+//         { tags: { $regex: searchRegex } },
+//       ],
+//     })
+//       .skip(skip)  // Skip the number of items based on the current page
+//       .limit(limit);  // Limit the number of items per page
+
+//     // Count the total number of blog posts for pagination
+//     const totalBlogPosts = await BlogPost.countDocuments({
+//       $or: [
+//         { title: { $regex: searchRegex } },
+//         { content: { $regex: searchRegex } },
+//         { tags: { $regex: searchRegex } },
+//       ],
+//     });
+
+//     // Calculate the total number of pages
+//     const totalPages = Math.ceil(totalBlogPosts / limit);
+
+//     // Send the response with the paginated blog posts
+//     res.status(200).json({
+//       message: "Blog posts retrieved successfully",
+//       blogPosts,
+//       pagination: {
+//         currentPage: page,
+//         totalPages,
+//         totalBlogPosts,
+//       },
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: "Error fetching blog posts" });
+//   }
+// });
 
 // Get a blog post by ID
 const getBlogPostById = asyncHandler(
@@ -175,22 +189,28 @@ const updateBlogPost: RequestHandler = asyncHandler(async (req, res, next) => {
     const newMedia: { url: string; type: string }[] = [];
     if (req.files && Array.isArray(req.files)) {
       for (const file of req.files) {
-        const uploadResult = await new Promise<{ url: string; type: string }>((resolve, reject) => {
-          const uploadStream = cloudinary.uploader.upload_stream(
-            {
-              resource_type: "auto",
-              folder: "blog_posts",
-            },
-            (error, result) => {
-              if (error) return reject(error);
-              if (result) resolve({ url: result.secure_url, type: result.resource_type });
-            }
-          );
+        const uploadResult = await new Promise<{ url: string; type: string }>(
+          (resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+              {
+                resource_type: "auto",
+                folder: "blog_posts",
+              },
+              (error, result) => {
+                if (error) return reject(error);
+                if (result)
+                  resolve({
+                    url: result.secure_url,
+                    type: result.resource_type,
+                  });
+              }
+            );
 
-          const bufferStream = new stream.PassThrough();
-          bufferStream.end(file.buffer);
-          bufferStream.pipe(uploadStream);
-        });
+            const bufferStream = new stream.PassThrough();
+            bufferStream.end(file.buffer);
+            bufferStream.pipe(uploadStream);
+          }
+        );
 
         newMedia.push(uploadResult);
       }
@@ -200,7 +220,9 @@ const updateBlogPost: RequestHandler = asyncHandler(async (req, res, next) => {
     for (const mediaItem of currentMedia) {
       if (!updatedMedia?.includes(mediaItem.url)) {
         const publicId = mediaItem.url.split("/").slice(-1)[0].split(".")[0];
-        await cloudinary.uploader.destroy(publicId, { resource_type: mediaItem.type });
+        await cloudinary.uploader.destroy(publicId, {
+          resource_type: mediaItem.type,
+        });
       }
     }
 
@@ -223,9 +245,7 @@ const updateBlogPost: RequestHandler = asyncHandler(async (req, res, next) => {
   }
 });
 
-
 // Delete blog post by ID
-
 
 const deleteBlogPost: RequestHandler = asyncHandler(async (req, res, next) => {
   try {
@@ -251,7 +271,7 @@ const deleteBlogPost: RequestHandler = asyncHandler(async (req, res, next) => {
     await BlogPost.deleteOne({ _id: blogPost._id });
     res.status(200).json({ message: "Blog post deleted successfully" });
   } catch (error) {
-    next(error);  
+    next(error);
   }
 });
 export {
