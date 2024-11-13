@@ -4,6 +4,7 @@ import asyncHandler from "express-async-handler";
 import { BlogPost } from "../model/BlogPost";
 import cloudinary from "../config/cloudinary";
 import * as stream from "stream";
+import { startOfWeek, endOfWeek } from 'date-fns';  // Import date-fns methods
 
 interface MediaItem {
   url: string;
@@ -85,13 +86,41 @@ const createBlogPost: RequestHandler = asyncHandler(async (req, res) => {
 // Get all blog posts
 const getAllBlogPosts: RequestHandler = asyncHandler(async (req, res) => {
   try {
-    // Fetch all blog posts from the database, sorted by creation date (newest first)
-    const blogPosts = await BlogPost.find().sort({ createdAt: -1 });
+    // Pagination logic
+    const page = parseInt(req.query.page as string) || 1;  // Default to page 1 if not provided
+    const limit = parseInt(req.query.limit as string) || 10;  // Default to 10 posts per page
+    const skip = (page - 1) * limit;  // Calculate the number of posts to skip for pagination
 
-    // Respond with the blog posts
-    res
-      .status(200)
-      .json({ message: "Blog posts retrieved successfully", blogPosts });
+    // Calculate start and end of the week to filter posts by the current week using date-fns
+    const startOfCurrentWeek = startOfWeek(new Date(), { weekStartsOn: 0 });  // Sunday as the start of the week
+    const endOfCurrentWeek = endOfWeek(new Date(), { weekStartsOn: 0 });  // Sunday as the start of the week
+
+    // Fetch the blog posts for the current week, sorted by createdAt (newest first)
+    const blogPosts = await BlogPost.find({
+      createdAt: { $gte: startOfCurrentWeek, $lte: endOfCurrentWeek }, // Filter for current week
+    })
+      .sort({ createdAt: -1 }) // Sort by creation date, newest first
+      .skip(skip)
+      .limit(limit);
+
+    // Calculate the total number of blog posts for pagination
+    const totalBlogPosts = await BlogPost.countDocuments({
+      createdAt: { $gte: startOfCurrentWeek, $lte: endOfCurrentWeek }, // Same filter for counting
+    });
+
+    // Calculate the total number of pages
+    const totalPages = Math.ceil(totalBlogPosts / limit);
+
+    // Send the response with the paginated blog posts
+    res.status(200).json({
+      message: "Blog posts retrieved successfully",
+      blogPosts,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalBlogPosts,
+      },
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error fetching blog posts" });

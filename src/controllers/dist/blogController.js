@@ -48,6 +48,7 @@ var express_async_handler_1 = require("express-async-handler");
 var BlogPost_1 = require("../model/BlogPost");
 var cloudinary_1 = require("../config/cloudinary");
 var stream = require("stream");
+var date_fns_1 = require("date-fns"); // Import date-fns methods
 var createBlogPost = express_async_handler_1["default"](function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
     var _a, title, description, media, _loop_1, _i, _b, file, newPost, error_1;
     return __generator(this, function (_c) {
@@ -135,25 +136,47 @@ var createBlogPost = express_async_handler_1["default"](function (req, res) { re
 exports.createBlogPost = createBlogPost;
 // Get all blog posts
 var getAllBlogPosts = express_async_handler_1["default"](function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var blogPosts, error_2;
+    var page, limit, skip, startOfCurrentWeek, endOfCurrentWeek, blogPosts, totalBlogPosts, totalPages, error_2;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
-                _a.trys.push([0, 2, , 3]);
-                return [4 /*yield*/, BlogPost_1.BlogPost.find().sort({ createdAt: -1 })];
+                _a.trys.push([0, 3, , 4]);
+                page = parseInt(req.query.page) || 1;
+                limit = parseInt(req.query.limit) || 10;
+                skip = (page - 1) * limit;
+                startOfCurrentWeek = date_fns_1.startOfWeek(new Date(), { weekStartsOn: 0 });
+                endOfCurrentWeek = date_fns_1.endOfWeek(new Date(), { weekStartsOn: 0 });
+                return [4 /*yield*/, BlogPost_1.BlogPost.find({
+                        createdAt: { $gte: startOfCurrentWeek, $lte: endOfCurrentWeek }
+                    })
+                        .sort({ createdAt: -1 }) // Sort by creation date, newest first
+                        .skip(skip)
+                        .limit(limit)];
             case 1:
                 blogPosts = _a.sent();
-                // Respond with the blog posts
-                res
-                    .status(200)
-                    .json({ message: "Blog posts retrieved successfully", blogPosts: blogPosts });
-                return [3 /*break*/, 3];
+                return [4 /*yield*/, BlogPost_1.BlogPost.countDocuments({
+                        createdAt: { $gte: startOfCurrentWeek, $lte: endOfCurrentWeek }
+                    })];
             case 2:
+                totalBlogPosts = _a.sent();
+                totalPages = Math.ceil(totalBlogPosts / limit);
+                // Send the response with the paginated blog posts
+                res.status(200).json({
+                    message: "Blog posts retrieved successfully",
+                    blogPosts: blogPosts,
+                    pagination: {
+                        currentPage: page,
+                        totalPages: totalPages,
+                        totalBlogPosts: totalBlogPosts
+                    }
+                });
+                return [3 /*break*/, 4];
+            case 3:
                 error_2 = _a.sent();
                 console.error(error_2);
                 res.status(500).json({ error: "Error fetching blog posts" });
-                return [3 /*break*/, 3];
-            case 3: return [2 /*return*/];
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
         }
     });
 }); });
