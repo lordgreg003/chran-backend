@@ -243,14 +243,10 @@ const deleteBlogPost: RequestHandler = asyncHandler(async (req, res, next) => {
         });
       }
     }
-
-    // Delete the blog post
     await BlogPost.deleteOne({ _id: blogPost._id });
-
-    // Send a success response
     res.status(200).json({ message: "Blog post deleted successfully" });
   } catch (error) {
-    next(error); // Pass errors to the next middleware
+    next(error);  
   }
 });
 export {

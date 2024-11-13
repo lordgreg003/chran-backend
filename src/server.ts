@@ -6,7 +6,8 @@ import bodyParser from "body-parser";
 import connectDB from "./config/db";
 import blogRoutes from "./routes/blogRoutes";
 import authRoutes from "./routes/adminRoutes";
-
+import errorMiddleware from "./middlewares/errorMiddleware";
+ 
 connectDB();
 
 // Create Express app
@@ -18,6 +19,10 @@ app.use(bodyParser.json());
 // Use blog routes
 app.use("/api/blogs", blogRoutes);
 app.use("/admin/", authRoutes);
+
+app.use(errorMiddleware.notFound);
+app.use(errorMiddleware.errorHandler);
+ 
 
 const PORT = process.env.PORT || 5000;
 

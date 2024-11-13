@@ -336,18 +336,14 @@ var deleteBlogPost = express_async_handler_1["default"](function (req, res, next
             case 4:
                 _i++;
                 return [3 /*break*/, 2];
-            case 5: 
-            // Delete the blog post
-            return [4 /*yield*/, BlogPost_1.BlogPost.deleteOne({ _id: blogPost._id })];
+            case 5: return [4 /*yield*/, BlogPost_1.BlogPost.deleteOne({ _id: blogPost._id })];
             case 6:
-                // Delete the blog post
                 _b.sent();
-                // Send a success response
                 res.status(200).json({ message: "Blog post deleted successfully" });
                 return [3 /*break*/, 8];
             case 7:
                 error_5 = _b.sent();
-                next(error_5); // Pass errors to the next middleware
+                next(error_5);
                 return [3 /*break*/, 8];
             case 8: return [2 /*return*/];
         }
