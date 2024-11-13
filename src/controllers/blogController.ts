@@ -4,7 +4,7 @@ import asyncHandler from "express-async-handler";
 import { BlogPost } from "../model/BlogPost";
 import cloudinary from "../config/cloudinary";
 import * as stream from "stream";
-import { startOfWeek, endOfWeek } from 'date-fns';  // Import date-fns methods
+import { startOfWeek, endOfWeek } from "date-fns"; // Import date-fns methods
 
 interface MediaItem {
   url: string;
@@ -77,7 +77,9 @@ const createBlogPost: RequestHandler = asyncHandler(async (req, res) => {
     // Save to MongoDB
     await newPost.save();
 
-    res.status(201).json({ message: "Blog post created successfully", newPost });
+    res
+      .status(201)
+      .json({ message: "Blog post created successfully", newPost });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Error creating blog post" });
@@ -144,7 +146,6 @@ const getAllBlogPosts = asyncHandler(
 //   }
 // });
 
-
 // Get a blog post by ID
 const getBlogPostById = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
@@ -188,22 +189,28 @@ const updateBlogPost: RequestHandler = asyncHandler(async (req, res, next) => {
     const newMedia: { url: string; type: string }[] = [];
     if (req.files && Array.isArray(req.files)) {
       for (const file of req.files) {
-        const uploadResult = await new Promise<{ url: string; type: string }>((resolve, reject) => {
-          const uploadStream = cloudinary.uploader.upload_stream(
-            {
-              resource_type: "auto",
-              folder: "blog_posts",
-            },
-            (error, result) => {
-              if (error) return reject(error);
-              if (result) resolve({ url: result.secure_url, type: result.resource_type });
-            }
-          );
+        const uploadResult = await new Promise<{ url: string; type: string }>(
+          (resolve, reject) => {
+            const uploadStream = cloudinary.uploader.upload_stream(
+              {
+                resource_type: "auto",
+                folder: "blog_posts",
+              },
+              (error, result) => {
+                if (error) return reject(error);
+                if (result)
+                  resolve({
+                    url: result.secure_url,
+                    type: result.resource_type,
+                  });
+              }
+            );
 
-          const bufferStream = new stream.PassThrough();
-          bufferStream.end(file.buffer);
-          bufferStream.pipe(uploadStream);
-        });
+            const bufferStream = new stream.PassThrough();
+            bufferStream.end(file.buffer);
+            bufferStream.pipe(uploadStream);
+          }
+        );
 
         newMedia.push(uploadResult);
       }
@@ -213,7 +220,9 @@ const updateBlogPost: RequestHandler = asyncHandler(async (req, res, next) => {
     for (const mediaItem of currentMedia) {
       if (!updatedMedia?.includes(mediaItem.url)) {
         const publicId = mediaItem.url.split("/").slice(-1)[0].split(".")[0];
-        await cloudinary.uploader.destroy(publicId, { resource_type: mediaItem.type });
+        await cloudinary.uploader.destroy(publicId, {
+          resource_type: mediaItem.type,
+        });
       }
     }
 
@@ -236,9 +245,7 @@ const updateBlogPost: RequestHandler = asyncHandler(async (req, res, next) => {
   }
 });
 
-
 // Delete blog post by ID
-
 
 const deleteBlogPost: RequestHandler = asyncHandler(async (req, res, next) => {
   try {
@@ -264,7 +271,7 @@ const deleteBlogPost: RequestHandler = asyncHandler(async (req, res, next) => {
     await BlogPost.deleteOne({ _id: blogPost._id });
     res.status(200).json({ message: "Blog post deleted successfully" });
   } catch (error) {
-    next(error);  
+    next(error);
   }
 });
 export {
