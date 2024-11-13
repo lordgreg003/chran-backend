@@ -1,8 +1,8 @@
 {
   "scripts": {
     "test": "start",
-    "dev": "node --max-old-space-size=8192 -r ts-node/register src/server.ts",
-    "start": "node --max-old-space-size=8192 src/server.ts"
+    "dev": "nodemon src/server.ts",
+    "start": "node src/server.ts"
   },
   "dependencies": {
     "@fluidjs/multer-cloudinary": "^1.0.4",
