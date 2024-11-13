@@ -48,7 +48,6 @@ var express_async_handler_1 = require("express-async-handler");
 var BlogPost_1 = require("../model/BlogPost");
 var cloudinary_1 = require("../config/cloudinary");
 var stream = require("stream");
-var date_fns_1 = require("date-fns"); // Import date-fns methods
 var createBlogPost = express_async_handler_1["default"](function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
     var _a, title, description, media, _loop_1, _i, _b, file, newPost, error_1;
     return __generator(this, function (_c) {
@@ -136,26 +135,32 @@ var createBlogPost = express_async_handler_1["default"](function (req, res) { re
 exports.createBlogPost = createBlogPost;
 // Get all blog posts
 var getAllBlogPosts = express_async_handler_1["default"](function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var page, limit, skip, startOfCurrentWeek, endOfCurrentWeek, blogPosts, totalBlogPosts, totalPages, error_2;
+    var searchRegex, page, limit, skip, blogPosts, totalBlogPosts, totalPages, error_2;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
                 _a.trys.push([0, 3, , 4]);
+                searchRegex = new RegExp(req.query.search, "i");
                 page = parseInt(req.query.page) || 1;
                 limit = parseInt(req.query.limit) || 10;
                 skip = (page - 1) * limit;
-                startOfCurrentWeek = date_fns_1.startOfWeek(new Date(), { weekStartsOn: 0 });
-                endOfCurrentWeek = date_fns_1.endOfWeek(new Date(), { weekStartsOn: 0 });
                 return [4 /*yield*/, BlogPost_1.BlogPost.find({
-                        createdAt: { $gte: startOfCurrentWeek, $lte: endOfCurrentWeek }
+                        $or: [
+                            { title: { $regex: searchRegex } },
+                            { content: { $regex: searchRegex } },
+                            { tags: { $regex: searchRegex } },
+                        ]
                     })
-                        .sort({ createdAt: -1 }) // Sort by creation date, newest first
-                        .skip(skip)
+                        .skip(skip) // Skip the number of items based on the current page
                         .limit(limit)];
             case 1:
                 blogPosts = _a.sent();
                 return [4 /*yield*/, BlogPost_1.BlogPost.countDocuments({
-                        createdAt: { $gte: startOfCurrentWeek, $lte: endOfCurrentWeek }
+                        $or: [
+                            { title: { $regex: searchRegex } },
+                            { content: { $regex: searchRegex } },
+                            { tags: { $regex: searchRegex } },
+                        ]
                     })];
             case 2:
                 totalBlogPosts = _a.sent();
