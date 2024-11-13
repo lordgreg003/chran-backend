@@ -134,61 +134,51 @@ var createBlogPost = express_async_handler_1["default"](function (req, res) { re
 }); });
 exports.createBlogPost = createBlogPost;
 // Get all blog posts
-var getAllBlogPosts = express_async_handler_1["default"](function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var searchRegex, page, limit, skip, blogPosts, totalBlogPosts, totalPages, error_2;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0:
-                _a.trys.push([0, 3, , 4]);
-                searchRegex = new RegExp(req.query.search, "i");
-                page = parseInt(req.query.page) || 1;
-                limit = parseInt(req.query.limit) || 10;
-                skip = (page - 1) * limit;
-                return [4 /*yield*/, BlogPost_1.BlogPost.find({
-                        $or: [
-                            { title: { $regex: searchRegex } },
-                            { content: { $regex: searchRegex } },
-                            { tags: { $regex: searchRegex } },
-                        ]
-                    })
-                        .skip(skip) // Skip the number of items based on the current page
-                        .limit(limit)];
-            case 1:
-                blogPosts = _a.sent();
-                return [4 /*yield*/, BlogPost_1.BlogPost.countDocuments({
-                        $or: [
-                            { title: { $regex: searchRegex } },
-                            { content: { $regex: searchRegex } },
-                            { tags: { $regex: searchRegex } },
-                        ]
-                    })];
-            case 2:
-                totalBlogPosts = _a.sent();
-                totalPages = Math.ceil(totalBlogPosts / limit);
-                // Send the response with the paginated blog posts
-                res.status(200).json({
-                    message: "Blog posts retrieved successfully",
-                    blogPosts: blogPosts,
-                    pagination: {
-                        currentPage: page,
-                        totalPages: totalPages,
-                        totalBlogPosts: totalBlogPosts
-                    }
-                });
-                return [3 /*break*/, 4];
-            case 3:
-                error_2 = _a.sent();
-                console.error(error_2);
-                res.status(500).json({ error: "Error fetching blog posts" });
-                return [3 /*break*/, 4];
-            case 4: return [2 /*return*/];
-        }
-    });
-}); });
-exports.getAllBlogPosts = getAllBlogPosts;
+// const getAllBlogPosts: RequestHandler = asyncHandler(async (req, res) => {
+//   try {
+//     // Pagination logic
+//     const searchRegex = new RegExp(req.query.search as string, "i");
+//     const page = parseInt(req.query.page as string) || 1;  // Default to page 1 if not provided
+//     const limit = parseInt(req.query.limit as string) || 10;  // Default to 10 posts per page
+//     const skip = (page - 1) * limit;  // Calculate the number of posts to skip for pagination
+//     // Fetch blog posts matching the search term
+//     const blogPosts = await BlogPost.find({
+//       $or: [
+//         { title: { $regex: searchRegex } },
+//         { content: { $regex: searchRegex } },
+//         { tags: { $regex: searchRegex } },
+//       ],
+//     })
+//       .skip(skip)  // Skip the number of items based on the current page
+//       .limit(limit);  // Limit the number of items per page
+//     // Count the total number of blog posts for pagination
+//     const totalBlogPosts = await BlogPost.countDocuments({
+//       $or: [
+//         { title: { $regex: searchRegex } },
+//         { content: { $regex: searchRegex } },
+//         { tags: { $regex: searchRegex } },
+//       ],
+//     });
+//     // Calculate the total number of pages
+//     const totalPages = Math.ceil(totalBlogPosts / limit);
+//     // Send the response with the paginated blog posts
+//     res.status(200).json({
+//       message: "Blog posts retrieved successfully",
+//       blogPosts,
+//       pagination: {
+//         currentPage: page,
+//         totalPages,
+//         totalBlogPosts,
+//       },
+//     });
+//   } catch (error) {
+//     console.error(error);
+//     res.status(500).json({ error: "Error fetching blog posts" });
+//   }
+// });
 // Get a blog post by ID
 var getBlogPostById = express_async_handler_1["default"](function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
-    var id, blogPost, error_3;
+    var id, blogPost, error_2;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -206,11 +196,11 @@ var getBlogPostById = express_async_handler_1["default"](function (req, res) { r
                 res.status(200).json(blogPost); // Send the blog post as a response
                 return [3 /*break*/, 4];
             case 3:
-                error_3 = _a.sent();
-                console.error("Error fetching blog post:", error_3);
+                error_2 = _a.sent();
+                console.error("Error fetching blog post:", error_2);
                 res
                     .status(500)
-                    .json({ message: "Error fetching blog post", error: error_3.message });
+                    .json({ message: "Error fetching blog post", error: error_2.message });
                 return [3 /*break*/, 4];
             case 4: return [2 /*return*/];
         }
@@ -219,7 +209,7 @@ var getBlogPostById = express_async_handler_1["default"](function (req, res) { r
 exports.getBlogPostById = getBlogPostById;
 // Update a blog post by ID
 var updateBlogPost = express_async_handler_1["default"](function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
-    var id, _a, title, description, updatedMedia_1, blogPost, currentMedia, newMedia, _loop_2, _i, _b, file, _c, currentMedia_1, mediaItem, publicId, updatedPost, error_4;
+    var id, _a, title, description, updatedMedia_1, blogPost, currentMedia, newMedia, _loop_2, _i, _b, file, _c, currentMedia_1, mediaItem, publicId, updatedPost, error_3;
     return __generator(this, function (_d) {
         switch (_d.label) {
             case 0:
@@ -302,8 +292,8 @@ var updateBlogPost = express_async_handler_1["default"](function (req, res, next
                 });
                 return [3 /*break*/, 12];
             case 11:
-                error_4 = _d.sent();
-                next(error_4);
+                error_3 = _d.sent();
+                next(error_3);
                 return [3 /*break*/, 12];
             case 12: return [2 /*return*/];
         }
@@ -312,7 +302,7 @@ var updateBlogPost = express_async_handler_1["default"](function (req, res, next
 exports.updateBlogPost = updateBlogPost;
 // Delete blog post by ID
 var deleteBlogPost = express_async_handler_1["default"](function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
-    var id, blogPost, _i, _a, mediaItem, publicId, error_5;
+    var id, blogPost, _i, _a, mediaItem, publicId, error_4;
     return __generator(this, function (_b) {
         switch (_b.label) {
             case 0:
@@ -347,8 +337,8 @@ var deleteBlogPost = express_async_handler_1["default"](function (req, res, next
                 res.status(200).json({ message: "Blog post deleted successfully" });
                 return [3 /*break*/, 8];
             case 7:
-                error_5 = _b.sent();
-                next(error_5);
+                error_4 = _b.sent();
+                next(error_4);
                 return [3 /*break*/, 8];
             case 8: return [2 /*return*/];
         }
