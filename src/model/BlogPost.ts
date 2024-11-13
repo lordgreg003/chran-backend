@@ -1,12 +1,19 @@
 import mongoose, { Schema, Document } from "mongoose";
 
+interface MediaItem {
+  url: string;
+  type: string; // Either "image" or "video"
+}
+
 interface IBlogPost extends Document {
   title: string;
   description: string;
-  media: string;
+  media: MediaItem[];
   mediaType: string; // Either "image" or "video"
   createdAt: Date;
 }
+
+
 
 const BlogPostSchema: Schema = new Schema({
   title: { type: String, required: true },

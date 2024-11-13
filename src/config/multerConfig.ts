@@ -1,6 +1,8 @@
 import multer from "multer";
+import path from "path";
 
-const storage = multer.memoryStorage(); // Use memory storage
+// Use memory storage
+const storage = multer.memoryStorage();
 
 export const upload = multer({
   storage,
@@ -8,6 +10,8 @@ export const upload = multer({
     fileSize: 100 * 1024 * 1024, // Allow up to 100MB per file
   },
   fileFilter: (req, file, cb) => {
+    console.log('File MIME type:', file.mimetype); // Log the MIME type for debugging
+
     const allowedTypes = [
       "image/jpeg", // JPEG images
       "image/png", // PNG images
@@ -25,13 +29,16 @@ export const upload = multer({
       "video/mkv", // MKV videos
     ];
 
+    // Check for the file type against allowed MIME types
     if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
+      cb(null, true); // Accept the file
     } else {
       const error = new Error(
         "Invalid file type. Only images and videos are allowed."
       );
-      cb(error as any, false); // Explicitly cast the error for TypeScript
+      cb(error as any, false); // Reject the file with an error
     }
   },
 });
+
+export default upload;

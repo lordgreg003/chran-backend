@@ -5,6 +5,16 @@ import { BlogPost } from "../model/BlogPost";
 import cloudinary from "../config/cloudinary";
 import * as stream from "stream";
 
+interface MediaItem {
+  url: string;
+  type: string;
+}
+
+interface MediaItem {
+  url: string;
+  type: string;
+}
+
 const createBlogPost: RequestHandler = asyncHandler(async (req, res) => {
   try {
     const { title, description } = req.body;
@@ -112,99 +122,112 @@ const getBlogPostById = asyncHandler(
 );
 
 // Update a blog post by ID
-// const updateBlogPost: RequestHandler = asyncHandler(
-//   async (req: Request, res: Response): Promise<void> => {
-//     try {
-//       // Extract the blog post ID and the updated data from the request
-//       const { id } = req.params;
-//       const { title, description, mediaUrl, mediaType } = req.body;
+const updateBlogPost: RequestHandler = asyncHandler(async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { title, description, updatedMedia } = req.body;
 
-//       // Log the received data
-//       console.log('Updating post with ID:', id);
-//       console.log('Updated data:', { title, description, mediaUrl, mediaType });
+    // Find blog post by ID
+    const blogPost = await BlogPost.findById(id);
+    if (!blogPost) {
+      res.status(404).json({ error: "Blog post not found" });
+      return;
+    }
 
-//       // Find the blog post by ID
-//       const post = await BlogPost.findById(id);
+    // Handle media updates
+    const currentMedia = blogPost.media || [];
 
-//       // Check if the post exists
-//       if (!post) {
-//         res.status(404).json({ message: "Blog post not found" });
-//         return;
-//       }
+    // Upload new media
+    const newMedia: { url: string; type: string }[] = [];
+    if (req.files && Array.isArray(req.files)) {
+      for (const file of req.files) {
+        const uploadResult = await new Promise<{ url: string; type: string }>((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            {
+              resource_type: "auto",
+              folder: "blog_posts",
+            },
+            (error, result) => {
+              if (error) return reject(error);
+              if (result) resolve({ url: result.secure_url, type: result.resource_type });
+            }
+          );
 
-//       // If there is media to update, delete the existing media from Cloudinary (if it exists)
-//       if (mediaUrl && post.mediaUrl !== mediaUrl) {
-//         const publicId = post.mediaUrl.split("/").pop()?.split(".")[0]; // Extract the public ID
-//         if (publicId) {
-//           await cloudinary.uploader.destroy(publicId); // Delete the previous media
-//         }
-//       }
+          const bufferStream = new stream.PassThrough();
+          bufferStream.end(file.buffer);
+          bufferStream.pipe(uploadStream);
+        });
 
-//       // Update the blog post fields with the new data
-//       post.title = title || post.title;  // Keep existing title if no new one is provided
-//       post.description = description || post.description;  // Same for description
-//       post.mediaUrl = mediaUrl || post.mediaUrl;  // Update media URL if provided
-//       post.mediaType = mediaType || post.mediaType;  // Update media type if provided
+        newMedia.push(uploadResult);
+      }
+    }
 
-//       // Save the updated post
-//       await post.save();
+    // Remove unused media from Cloudinary
+    for (const mediaItem of currentMedia) {
+      if (!updatedMedia?.includes(mediaItem.url)) {
+        const publicId = mediaItem.url.split("/").slice(-1)[0].split(".")[0];
+        await cloudinary.uploader.destroy(publicId, { resource_type: mediaItem.type });
+      }
+    }
 
-//       // Respond with the updated blog post
-//       res.status(200).json({ message: "Blog post updated successfully", updatedPost: post });
-//     } catch (error) {
-//       console.error('Error updating blog post:', error);
-//       res.status(500).json({ error: "Error updating blog post" });
-//     }
-//   }
-// );
+    // Update blog post
+    blogPost.title = title || blogPost.title;
+    blogPost.description = description || blogPost.description;
+    blogPost.media = [
+      ...newMedia,
+      ...currentMedia.filter((media) => updatedMedia?.includes(media.url)),
+    ];
+
+    const updatedPost = await blogPost.save();
+
+    res.status(200).json({
+      message: "Blog post updated successfully",
+      updatedPost,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 
 // Delete blog post by ID
-const deleteBlogPost: RequestHandler = asyncHandler(
-  async (req: Request, res: Response): Promise<void> => {
-    try {
-      // Extract the post ID from the URL parameters
-      const { id } = req.params;
 
-      console.log("Looking for post with ID:", id);
 
-      // Check if the post exists
-      const post = await BlogPost.findById(id);
+const deleteBlogPost: RequestHandler = asyncHandler(async (req, res, next) => {
+  try {
+    const { id } = req.params;
 
-      if (!post) {
-        res.status(404).json({ message: "Blog post not found" });
-        return;
-      }
+    // Fetch the blog post by ID
+    const blogPost = await BlogPost.findById(id);
 
-      console.log("Post found:", post);
-
-      // If media exists, delete it from Cloudinary
-      if (post.media) {
-        const publicId = post.media.split("/").pop()?.split(".")[0];
-        console.log("Deleting media with publicId:", publicId);
-
-        if (publicId) {
-          await cloudinary.uploader.destroy(publicId);
-        }
-      }
-
-      // Delete the blog post from MongoDB
-      await BlogPost.findByIdAndDelete(id);
-
-      // Send a success response
-      res
-        .status(200)
-        .json({ message: "Blog post and media deleted successfully" });
-    } catch (error) {
-      console.error("Error deleting blog post:", error);
-      res.status(500).json({ error: "Error deleting blog post" });
+    if (!blogPost) {
+      res.status(404).json({ error: "Blog post not found" });
+      return; // Exit after sending a response
     }
-  }
-);
 
+    // Delete associated media
+    if (blogPost.media && Array.isArray(blogPost.media)) {
+      for (const mediaItem of blogPost.media as MediaItem[]) {
+        const publicId = mediaItem.url.split("/").slice(-1)[0].split(".")[0];
+        await cloudinary.uploader.destroy(publicId, {
+          resource_type: mediaItem.type,
+        });
+      }
+    }
+
+    // Delete the blog post
+    await BlogPost.deleteOne({ _id: blogPost._id });
+
+    // Send a success response
+    res.status(200).json({ message: "Blog post deleted successfully" });
+  } catch (error) {
+    next(error); // Pass errors to the next middleware
+  }
+});
 export {
   createBlogPost,
   getAllBlogPosts,
   getBlogPostById,
-  // updateBlogPost,
+  updateBlogPost,
   deleteBlogPost,
 };
