@@ -20,7 +20,7 @@ app.use("/api/blogs", blogRoutes_1["default"]);
 app.use("/admin/", adminRoutes_1["default"]);
 app.use(errorMiddleware_1["default"].notFound);
 app.use(errorMiddleware_1["default"].errorHandler);
-var PORT = process.env.PORT || 5000;
+var PORT = process.env.PORT || 3001;
 // Start the server
 app.listen(PORT, function () {
     console.log("Server is running on port " + PORT);
