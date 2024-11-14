@@ -7,7 +7,8 @@ import connectDB from "./config/db";
 import blogRoutes from "./routes/blogRoutes";
 import authRoutes from "./routes/adminRoutes";
 import errorMiddleware from "./middlewares/errorMiddleware";
- 
+
+// Connect to the database
 connectDB();
 
 // Create Express app
@@ -16,19 +17,18 @@ app.use(express.json());
 app.use(cors());
 app.use(bodyParser.json());
 
-
-
 // Use blog routes
 app.use("/api/blogs", blogRoutes);
 app.use("/admin/", authRoutes);
 
+// Error handling middleware
 app.use(errorMiddleware.notFound);
 app.use(errorMiddleware.errorHandler);
- 
 
-const PORT = process.env.PORT || 3001;
+// Set up the port for deployment
+const PORT = Number(process.env.PORT) || 3001;
 
 // Start the server
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server is running on http://0.0.0.0:${PORT}`);
 });
