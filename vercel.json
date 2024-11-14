@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "src/server.ts",
+      "use": "@vercel/node"
+    }
+  ],
+  "env": {
+    "MONGODB_URI": "mongodb+srv://chideranwokoye555:4qbSPSa6DoKD4Pzf@cluster0.jms6n.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",
+    "JWT_SECRET": "9pDkEG14gJmO7IFSeUVOp7y4QXdyAcymT7igrHp5izA=",
+    "CLOUDINARY_CLOUD_NAME": "dg8cmo2gb",
+    "CLOUDINARY_API_KEY": "929328426984996",
+    "CLOUDINARY_API_SECRET": "ZLllB8FbCbpsDakPYwoCVHfEJe8"
+  }
+}
