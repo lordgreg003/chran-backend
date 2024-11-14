@@ -2,7 +2,8 @@
   "scripts": {
     "test": "start",
     "dev": "nodemon src/server.ts",
-    "start": "node src/server.ts"
+    "build": "tsc",
+    "start": "ts-node src/server.ts"
   },
   "dependencies": {
     "@fluidjs/multer-cloudinary": "^1.0.4",

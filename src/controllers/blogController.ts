@@ -4,8 +4,7 @@ import asyncHandler from "express-async-handler";
 import { BlogPost } from "../model/BlogPost";
 import cloudinary from "../config/cloudinary";
 import * as stream from "stream";
-import { startOfWeek, endOfWeek } from "date-fns"; // Import date-fns methods
-
+ 
 interface MediaItem {
   url: string;
   type: string;
@@ -86,66 +85,34 @@ const createBlogPost: RequestHandler = asyncHandler(async (req, res) => {
   }
 });
 // Get all blog posts
-const getAllBlogPosts = asyncHandler(
-  async (req: Request, res: Response): Promise<void> => {
-    try {
-      const blogPosts = await BlogPost.find(); // Fetch all blog posts from the database
-      res.status(200).json(blogPosts); // Send back the blog posts as a response
-    } catch (error: any) {
-      console.error("Error fetching blog posts:", error);
-      res
-        .status(500)
-        .json({ message: "Error fetching blog posts", error: error.message });
-    }
+const getAllBlogPosts = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  try {
+    const search = req.query.search ? new RegExp(req.query.search as string, "i") : null;
+    const page = parseInt(req.query.page as string, 10) || 1;
+    const limit = parseInt(req.query.limit as string, 10) || 10;
+    const skip = (page - 1) * limit;
+
+    const query = search ? { title: { $regex: search } } : {};
+
+    const [blogPosts, total] = await Promise.all([
+      BlogPost.find(query).skip(skip).limit(limit),
+      BlogPost.countDocuments(query),
+    ]);
+
+    res.status(200).json({
+      blogPosts,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+      },
+    });
+  } catch (error: any) {
+    console.error("Error fetching blog posts:", error);
+    res.status(500).json({ message: "Error fetching blog posts" });
   }
-);
-// const getAllBlogPosts: RequestHandler = asyncHandler(async (req, res) => {
-//   try {
-//     // Pagination logic
-//     const searchRegex = new RegExp(req.query.search as string, "i");
-//     const page = parseInt(req.query.page as string) || 1;  // Default to page 1 if not provided
-//     const limit = parseInt(req.query.limit as string) || 10;  // Default to 10 posts per page
-//     const skip = (page - 1) * limit;  // Calculate the number of posts to skip for pagination
-
-//     // Fetch blog posts matching the search term
-//     const blogPosts = await BlogPost.find({
-//       $or: [
-//         { title: { $regex: searchRegex } },
-//         { content: { $regex: searchRegex } },
-//         { tags: { $regex: searchRegex } },
-//       ],
-//     })
-//       .skip(skip)  // Skip the number of items based on the current page
-//       .limit(limit);  // Limit the number of items per page
-
-//     // Count the total number of blog posts for pagination
-//     const totalBlogPosts = await BlogPost.countDocuments({
-//       $or: [
-//         { title: { $regex: searchRegex } },
-//         { content: { $regex: searchRegex } },
-//         { tags: { $regex: searchRegex } },
-//       ],
-//     });
-
-//     // Calculate the total number of pages
-//     const totalPages = Math.ceil(totalBlogPosts / limit);
-
-//     // Send the response with the paginated blog posts
-//     res.status(200).json({
-//       message: "Blog posts retrieved successfully",
-//       blogPosts,
-//       pagination: {
-//         currentPage: page,
-//         totalPages,
-//         totalBlogPosts,
-//       },
-//     });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ error: "Error fetching blog posts" });
-//   }
-// });
-
+});
+ 
 // Get a blog post by ID
 const getBlogPostById = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {

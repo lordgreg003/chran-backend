@@ -10,7 +10,7 @@ exports.upload = multer_1["default"]({
         fileSize: 100 * 1024 * 1024
     },
     fileFilter: function (req, file, cb) {
-        console.log('File MIME type:', file.mimetype); // Log the MIME type for debugging
+        console.log("File MIME type:", file.mimetype); // Log the MIME type for debugging
         var allowedTypes = [
             "image/jpeg",
             "image/png",

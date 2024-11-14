@@ -10,7 +10,7 @@ export const upload = multer({
     fileSize: 100 * 1024 * 1024, // Allow up to 100MB per file
   },
   fileFilter: (req, file, cb) => {
-    console.log('File MIME type:', file.mimetype); // Log the MIME type for debugging
+    console.log("File MIME type:", file.mimetype); // Log the MIME type for debugging
 
     const allowedTypes = [
       "image/jpeg", // JPEG images
