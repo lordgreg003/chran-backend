@@ -14,18 +14,14 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const mongoose_1 = __importDefault(require("mongoose"));
 const MONGO_URI = process.env.MONGO_URI;
-console.log("MONGO_URI:", MONGO_URI);
 const connectDB = () => __awaiter(void 0, void 0, void 0, function* () {
     try {
         mongoose_1.default.set("strictQuery", false);
-        const connection = yield mongoose_1.default.connect(MONGO_URI, {
-            useUnifiedTopology: true,
-            useNewUrlParser: true,
-        });
-        console.log(`MongoDB Connected: ${connection.connection.host}`);
+        yield mongoose_1.default.connect(MONGO_URI, {});
+        console.log(`MongoDB Connected: ${mongoose_1.default.connection.host}`);
     }
     catch (error) {
-        console.log(`Error: ${error.message}`);
+        console.error(`Error connecting to MongoDB: ${error.message}`);
         process.exit(1);
     }
 });

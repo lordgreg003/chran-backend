@@ -1,5 +1,5 @@
 import express, { Application } from "express";
-import dotenv from "dotenv";
+import * as dotenv from "dotenv";
 dotenv.config();
 import cors from "cors";
 import bodyParser from "body-parser";
