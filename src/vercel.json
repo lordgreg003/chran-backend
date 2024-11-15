@@ -6,11 +6,22 @@
       "use": "@vercel/node"
     }
   ],
+  "routes": [
+    {
+      "src": "/api/blogs(.*)",
+      "dest": "/src/server.ts"
+    },
+    {
+      "src": "/admin(.*)",
+      "dest": "/src/server.ts"
+    }
+  ],
   "env": {
-    "MONGODB_URI": "mongodb+srv://chideranwokoye555:4qbSPSa6DoKD4Pzf@cluster0.jms6n.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0",
-    "JWT_SECRET": "9pDkEG14gJmO7IFSeUVOp7y4QXdyAcymT7igrHp5izA=",
-    "CLOUDINARY_CLOUD_NAME": "dg8cmo2gb",
-    "CLOUDINARY_API_KEY": "929328426984996",
-    "CLOUDINARY_API_SECRET": "ZLllB8FbCbpsDakPYwoCVHfEJe8"
+    "PORT": "5000",
+    "MONGO_URI": "@mongo-uri",
+    "JWT_SECRET": "@jwt-secret",
+    "CLOUDINARY_CLOUD_NAME": "@cloudinary-cloud-name",
+    "CLOUDINARY_API_KEY": "@cloudinary-api-key",
+    "CLOUDINARY_API_SECRET": "@cloudinary-api-secret"
   }
 }

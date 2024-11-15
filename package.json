@@ -1,9 +1,12 @@
 {
+  "engines": {
+    "node": "20.18.0"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon src/server.ts",
     "build": "tsc",
-    "start": "ts-node src/server.ts"
+    "start": "node dist/server.js"
   },
   "dependencies": {
     "@fluidjs/multer-cloudinary": "^1.0.4",

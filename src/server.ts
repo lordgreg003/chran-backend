@@ -3,10 +3,10 @@ import * as dotenv from "dotenv";
 dotenv.config();
 import cors from "cors";
 import bodyParser from "body-parser";
-import connectDB from "./config/db";
 import blogRoutes from "./routes/blogRoutes";
 import authRoutes from "./routes/adminRoutes";
 import errorMiddleware from "./middlewares/errorMiddleware";
+import connectDB from "./config/connectDB";
 
 // Connect to the database
 connectDB();
