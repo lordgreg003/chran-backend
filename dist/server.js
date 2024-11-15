@@ -31,12 +31,12 @@ const dotenv = __importStar(require("dotenv"));
 dotenv.config();
 const cors_1 = __importDefault(require("cors"));
 const body_parser_1 = __importDefault(require("body-parser"));
-const db_1 = __importDefault(require("./config/db"));
 const blogRoutes_1 = __importDefault(require("./routes/blogRoutes"));
 const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
 const errorMiddleware_1 = __importDefault(require("./middlewares/errorMiddleware"));
+const connectDB_1 = __importDefault(require("./config/connectDB"));
 // Connect to the database
-(0, db_1.default)();
+(0, connectDB_1.default)();
 // Create Express app
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
