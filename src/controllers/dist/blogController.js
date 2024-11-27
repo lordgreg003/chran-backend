@@ -48,48 +48,62 @@ var express_async_handler_1 = require("express-async-handler");
 var BlogPost_1 = require("../model/BlogPost");
 var cloudinary_1 = require("../config/cloudinary");
 var stream = require("stream");
+var axios_1 = require("axios");
+var slugify_1 = require("../utils/slugify");
 var createBlogPost = express_async_handler_1["default"](function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var _a, title, description, media, _loop_1, _i, _b, file, newPost, error_1;
+    var _a, title, description, slug, baseUrl, fullUrl, media, _loop_1, _i, _b, file, newPost, webhookUrl, error_1;
     return __generator(this, function (_c) {
         switch (_c.label) {
             case 0:
-                _c.trys.push([0, 6, , 7]);
+                _c.trys.push([0, 9, , 10]);
                 _a = req.body, title = _a.title, description = _a.description;
+                console.log("Received title:", title);
+                console.log("Received description:", description);
+                slug = slugify_1.generateSlug(title);
+                console.log("Generated slug:", slug);
+                baseUrl = "https://chran1.vercel.app/blog/";
+                fullUrl = "" + baseUrl + slug;
+                console.log("Generated full URL:", fullUrl);
                 media = [];
-                if (!(req.files && Array.isArray(req.files))) return [3 /*break*/, 4];
+                if (!(req.files && Array.isArray(req.files))) return [3 /*break*/, 5];
                 _loop_1 = function (file) {
                     var uploadResult;
                     return __generator(this, function (_a) {
                         switch (_a.label) {
-                            case 0: return [4 /*yield*/, new Promise(function (resolve, reject) {
-                                    var uploadStream = cloudinary_1["default"].uploader.upload_stream({
-                                        resource_type: "auto",
-                                        folder: "blog_posts",
-                                        transformation: file.mimetype.startsWith("image")
-                                            ? [
-                                                {
-                                                    width: 300,
-                                                    height: 300,
-                                                    crop: "limit",
-                                                    quality: "auto:best"
-                                                },
-                                            ]
-                                            : undefined
-                                    }, function (error, result) {
-                                        if (error) {
-                                            return reject(new Error("Failed to upload to Cloudinary"));
-                                        }
-                                        if (result) {
-                                            resolve({
-                                                url: result.secure_url,
-                                                type: result.resource_type
-                                            });
-                                        }
-                                    });
-                                    var bufferStream = new stream.PassThrough();
-                                    bufferStream.end(file.buffer);
-                                    bufferStream.pipe(uploadStream);
-                                })];
+                            case 0:
+                                console.log("Processing file:", file.originalname);
+                                console.log("File MIME type:", file.mimetype);
+                                return [4 /*yield*/, new Promise(function (resolve, reject) {
+                                        var uploadStream = cloudinary_1["default"].uploader.upload_stream({
+                                            resource_type: "auto",
+                                            folder: "blog_posts",
+                                            transformation: file.mimetype.startsWith("image")
+                                                ? [
+                                                    {
+                                                        width: 300,
+                                                        height: 300,
+                                                        crop: "limit",
+                                                        quality: "auto:best"
+                                                    },
+                                                ]
+                                                : undefined
+                                        }, function (error, result) {
+                                            if (error) {
+                                                console.error("Cloudinary upload error:", error);
+                                                return reject(new Error("Failed to upload to Cloudinary"));
+                                            }
+                                            if (result) {
+                                                console.log("Cloudinary upload successful, result:", result);
+                                                resolve({
+                                                    url: result.secure_url,
+                                                    type: result.resource_type
+                                                });
+                                            }
+                                        });
+                                        var bufferStream = new stream.PassThrough();
+                                        bufferStream.end(file.buffer);
+                                        bufferStream.pipe(uploadStream);
+                                    })];
                             case 1:
                                 uploadResult = _a.sent();
                                 // Add the uploaded media info to the media array
@@ -110,31 +124,65 @@ var createBlogPost = express_async_handler_1["default"](function (req, res) { re
             case 3:
                 _i++;
                 return [3 /*break*/, 1];
-            case 4:
+            case 4: return [3 /*break*/, 6];
+            case 5:
+                console.log("No files uploaded or files array is not an array.");
+                _c.label = 6;
+            case 6:
                 newPost = new BlogPost_1.BlogPost({
                     title: title,
                     description: description,
-                    media: media
+                    slug: slug,
+                    media: media,
+                    fullUrl: fullUrl
                 });
                 // Save to MongoDB
                 return [4 /*yield*/, newPost.save()];
-            case 5:
+            case 7:
                 // Save to MongoDB
                 _c.sent();
+                webhookUrl = "https://hook.eu2.make.com/23gt24xaj83x26hf1odsxl92lrji6mrk";
+                return [4 /*yield*/, axios_1["default"].post(webhookUrl, {
+                        title: title,
+                        description: description,
+                        slug: slug,
+                        media: media,
+                        fullUrl: fullUrl
+                    })];
+            case 8:
+                _c.sent();
+                // Render the blog post page with metadata
+                res.render("blogPost", {
+                    title: title,
+                    description: description,
+                    imageUrl: media.length > 0
+                        ? media[0].url
+                        : "https://res.cloudinary.com/dg8cmo2gb/image/upload/v1732618339/blog_posts/g12wzcr5gw1po9c80zqr.jpg",
+                    fullUrl: fullUrl,
+                    metaTags: {
+                        ogTitle: title,
+                        ogDescription: description,
+                        ogImage: media.length > 0
+                            ? media[0].url
+                            : "https://res.cloudinary.com/dg8cmo2gb/image/upload/v1732618339/blog_posts/g12wzcr5gw1po9c80zqr.jpg",
+                        ogUrl: fullUrl
+                    }
+                });
                 res
                     .status(201)
                     .json({ message: "Blog post created successfully", newPost: newPost });
-                return [3 /*break*/, 7];
-            case 6:
+                return [3 /*break*/, 10];
+            case 9:
                 error_1 = _c.sent();
-                console.error(error_1);
+                console.error("Error creating blog post:", error_1);
                 res.status(500).json({ error: "Error creating blog post" });
-                return [3 /*break*/, 7];
-            case 7: return [2 /*return*/];
+                return [3 /*break*/, 10];
+            case 10: return [2 /*return*/];
         }
     });
 }); });
 exports.createBlogPost = createBlogPost;
+z;
 // Get all blog posts
 var getAllBlogPosts = express_async_handler_1["default"](function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
     var search, page, limit, skip, query, _a, blogPosts, total, error_2;
@@ -142,7 +190,9 @@ var getAllBlogPosts = express_async_handler_1["default"](function (req, res) { r
         switch (_b.label) {
             case 0:
                 _b.trys.push([0, 2, , 3]);
-                search = req.query.search ? new RegExp(req.query.search, "i") : null;
+                search = req.query.search
+                    ? new RegExp(req.query.search, "i")
+                    : null;
                 page = parseInt(req.query.page, 10) || 1;
                 limit = parseInt(req.query.limit, 10) || 10;
                 skip = (page - 1) * limit;

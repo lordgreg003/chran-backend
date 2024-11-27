@@ -4,11 +4,8 @@ import asyncHandler from "express-async-handler";
 import { BlogPost } from "../model/BlogPost";
 import cloudinary from "../config/cloudinary";
 import * as stream from "stream";
- 
-interface MediaItem {
-  url: string;
-  type: string;
-}
+import axios from "axios";
+import { generateSlug } from "../utils/slugify";
 
 interface MediaItem {
   url: string;
@@ -19,39 +16,41 @@ const createBlogPost: RequestHandler = asyncHandler(async (req, res) => {
   try {
     const { title, description } = req.body;
 
-    // Array to store media URLs and types
-    const media = [];
+    // Validate title and description
+    if (!title || !description) {
+      return res.status(400).json({ error: "Title and description are required" });
+    }
 
+    // Generate slug and check uniqueness
+    const slug = generateSlug(title);
+    const existingPost = await BlogPost.findOne({ slug });
+    if (existingPost) {
+      return res.status(400).json({ error: "A post with this title already exists" });
+    }
+
+    // Construct the full URL
+    const baseUrl = "https://chran1.vercel.app/blog/";
+    const fullUrl = `${baseUrl}${slug}`;
+
+    // Array to store media URLs
+    const media: { url: string; type: string }[] = [];
+
+    // Handle file uploads
     if (req.files && Array.isArray(req.files)) {
       for (const file of req.files) {
-        // Upload to Cloudinary with resource type auto
         const uploadResult = await new Promise<{ url: string; type: string }>(
           (resolve, reject) => {
             const uploadStream = cloudinary.uploader.upload_stream(
               {
-                resource_type: "auto", // Automatically handle images and videos
+                resource_type: "auto",
                 folder: "blog_posts",
                 transformation: file.mimetype.startsWith("image")
-                  ? [
-                      {
-                        width: 300,
-                        height: 300,
-                        crop: "limit",
-                        quality: "auto:best",
-                      },
-                    ]
-                  : undefined, // Optional: Add video transformations if needed
+                  ? [{ width: 300, height: 300, crop: "limit", quality: "auto:best" }]
+                  : undefined,
               },
               (error, result) => {
-                if (error) {
-                  return reject(new Error("Failed to upload to Cloudinary"));
-                }
-                if (result) {
-                  resolve({
-                    url: result.secure_url,
-                    type: result.resource_type,
-                  });
-                }
+                if (error) reject(new Error("Failed to upload to Cloudinary"));
+                if (result) resolve({ url: result.secure_url, type: result.resource_type });
               }
             );
 
@@ -61,7 +60,6 @@ const createBlogPost: RequestHandler = asyncHandler(async (req, res) => {
           }
         );
 
-        // Add the uploaded media info to the media array
         media.push(uploadResult);
       }
     }
@@ -70,49 +68,68 @@ const createBlogPost: RequestHandler = asyncHandler(async (req, res) => {
     const newPost = new BlogPost({
       title,
       description,
-      media, // Save the array of media objects
+      slug,
+      media,
+      fullUrl,
     });
-
-    // Save to MongoDB
     await newPost.save();
 
-    res
-      .status(201)
-      .json({ message: "Blog post created successfully", newPost });
+    // Notify external services
+    const webhookUrl = "https://hook.eu2.make.com/23gt24xaj83x26hf1odsxl92lrji6mrk";
+    await axios.post(webhookUrl, { title, description, slug, media, fullUrl });
+
+    // Respond with JSON and metadata
+    res.status(201).json({
+      message: "Blog post created successfully",
+      post: {
+        id: newPost._id,
+        title: newPost.title,
+        description: newPost.description,
+        slug: newPost.slug,
+        fullUrl: newPost.fullUrl,
+        media: newPost.media,
+      },
+    });
   } catch (error) {
-    console.error(error);
+    console.error("Error creating blog post:", error);
     res.status(500).json({ error: "Error creating blog post" });
   }
 });
+
+
 // Get all blog posts
-const getAllBlogPosts = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  try {
-    const search = req.query.search ? new RegExp(req.query.search as string, "i") : null;
-    const page = parseInt(req.query.page as string, 10) || 1;
-    const limit = parseInt(req.query.limit as string, 10) || 10;
-    const skip = (page - 1) * limit;
+const getAllBlogPosts = asyncHandler(
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const search = req.query.search
+        ? new RegExp(req.query.search as string, "i")
+        : null;
+      const page = parseInt(req.query.page as string, 10) || 1;
+      const limit = parseInt(req.query.limit as string, 10) || 10;
+      const skip = (page - 1) * limit;
 
-    const query = search ? { title: { $regex: search } } : {};
+      const query = search ? { title: { $regex: search } } : {};
 
-    const [blogPosts, total] = await Promise.all([
-      BlogPost.find(query).skip(skip).limit(limit),
-      BlogPost.countDocuments(query),
-    ]);
+      const [blogPosts, total] = await Promise.all([
+        BlogPost.find(query).skip(skip).limit(limit),
+        BlogPost.countDocuments(query),
+      ]);
 
-    res.status(200).json({
-      blogPosts,
-      pagination: {
-        currentPage: page,
-        totalPages: Math.ceil(total / limit),
-        totalItems: total,
-      },
-    });
-  } catch (error: any) {
-    console.error("Error fetching blog posts:", error);
-    res.status(500).json({ message: "Error fetching blog posts" });
+      res.status(200).json({
+        blogPosts,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+        },
+      });
+    } catch (error: any) {
+      console.error("Error fetching blog posts:", error);
+      res.status(500).json({ message: "Error fetching blog posts" });
+    }
   }
-});
- 
+);
+
 // Get a blog post by ID
 const getBlogPostById = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
