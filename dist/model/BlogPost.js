@@ -34,6 +34,8 @@ const BlogPostSchema = new mongoose_1.Schema({
             type: { type: String }, // Either "image" or "video"
         },
     ],
+    slug: { type: String, unique: true, required: true },
+    fullUrl: { type: String, unique: true, required: true },
     mediaType: { type: String },
     createdAt: { type: Date, default: Date.now },
 });

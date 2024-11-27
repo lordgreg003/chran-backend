@@ -29,6 +29,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const dotenv = __importStar(require("dotenv"));
 dotenv.config();
+const path_1 = __importDefault(require("path"));
 const cors_1 = __importDefault(require("cors"));
 const body_parser_1 = __importDefault(require("body-parser"));
 const blogRoutes_1 = __importDefault(require("./routes/blogRoutes"));
@@ -42,7 +43,12 @@ const app = (0, express_1.default)();
 app.use(express_1.default.json());
 app.use((0, cors_1.default)());
 app.use(body_parser_1.default.json());
+app.set("view engine", "ejs");
+app.set("views", path_1.default.join(__dirname, "views"));
 // Use blog routes
+app.get("/", (req, res) => {
+    res.render("blogPost");
+});
 app.use("/api/blogs", blogRoutes_1.default);
 app.use("/admin/", adminRoutes_1.default);
 // Error handling middleware

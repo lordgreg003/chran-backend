@@ -40,13 +40,26 @@ const express_async_handler_1 = __importDefault(require("express-async-handler")
 const BlogPost_1 = require("../model/BlogPost");
 const cloudinary_1 = __importDefault(require("../config/cloudinary"));
 const stream = __importStar(require("stream"));
+const axios_1 = __importDefault(require("axios"));
+const slugify_1 = require("../utils/slugify");
 const createBlogPost = (0, express_async_handler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { title, description } = req.body;
+        console.log("Received title:", title);
+        console.log("Received description:", description);
+        // Generate slug from the title
+        const slug = (0, slugify_1.generateSlug)(title);
+        console.log("Generated slug:", slug);
+        // Generate the full URL for redirection
+        const baseUrl = "https://chran1.vercel.app/blog/";
+        const fullUrl = `${baseUrl}${slug}`;
+        console.log("Generated full URL:", fullUrl);
         // Array to store media URLs and types
         const media = [];
         if (req.files && Array.isArray(req.files)) {
             for (const file of req.files) {
+                console.log("Processing file:", file.originalname);
+                console.log("File MIME type:", file.mimetype);
                 // Upload to Cloudinary with resource type auto
                 const uploadResult = yield new Promise((resolve, reject) => {
                     const uploadStream = cloudinary_1.default.uploader.upload_stream({
@@ -64,9 +77,11 @@ const createBlogPost = (0, express_async_handler_1.default)((req, res) => __awai
                             : undefined, // Optional: Add video transformations if needed
                     }, (error, result) => {
                         if (error) {
+                            console.error("Cloudinary upload error:", error);
                             return reject(new Error("Failed to upload to Cloudinary"));
                         }
                         if (result) {
+                            console.log("Cloudinary upload successful, result:", result);
                             resolve({
                                 url: result.secure_url,
                                 type: result.resource_type,
@@ -81,20 +96,41 @@ const createBlogPost = (0, express_async_handler_1.default)((req, res) => __awai
                 media.push(uploadResult);
             }
         }
-        // Create a new blog post
+        else {
+            console.log("No files uploaded or files array is not an array.");
+        }
+        // Create a new blog post with the generated slug, full URL, and media array
         const newPost = new BlogPost_1.BlogPost({
             title,
             description,
-            media, // Save the array of media objects
+            slug,
+            media,
+            fullUrl,
         });
         // Save to MongoDB
         yield newPost.save();
+        const webhookUrl = "https://hook.eu2.make.com/23gt24xaj83x26hf1odsxl92lrji6mrk";
+        yield axios_1.default.post(webhookUrl, {
+            title,
+            description,
+            slug,
+            media,
+            fullUrl,
+        });
+        res.render("blogPost", {
+            title,
+            description,
+            imageUrl: media.length > 0
+                ? media[0].url
+                : "https://default-image-url.com/placeholder.jpg",
+            fullUrl,
+        });
         res
             .status(201)
             .json({ message: "Blog post created successfully", newPost });
     }
     catch (error) {
-        console.error(error);
+        console.error("Error creating blog post:", error);
         res.status(500).json({ error: "Error creating blog post" });
     }
 }));
@@ -102,7 +138,9 @@ exports.createBlogPost = createBlogPost;
 // Get all blog posts
 const getAllBlogPosts = (0, express_async_handler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const search = req.query.search ? new RegExp(req.query.search, "i") : null;
+        const search = req.query.search
+            ? new RegExp(req.query.search, "i")
+            : null;
         const page = parseInt(req.query.page, 10) || 1;
         const limit = parseInt(req.query.limit, 10) || 10;
         const skip = (page - 1) * limit;

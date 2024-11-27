@@ -6,16 +6,19 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon src/server.ts",
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "webhook-test": "ts-node src/sendWebhookTest.ts"
   },
   "dependencies": {
     "@fluidjs/multer-cloudinary": "^1.0.4",
+    "axios": "^1.7.7",
     "bcrypt": "^5.1.1",
     "class-validator": "^0.14.1",
     "cloudinary": "^2.5.1",
     "cors": "^2.8.5",
     "date-fns": "^4.1.0",
     "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
     "express": "^4.21.1",
     "express-async-handler": "^1.2.0",
     "jsonwebtoken": "^9.0.2",

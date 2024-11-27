@@ -1,30 +1,58 @@
 import { ValidationError } from "class-validator";
 import { NextFunction, Request, Response } from "express";
 import asyncHandler from "express-async-handler";
-import tokenHandler from "../utils/handleToken"; // Assuming you
-import { handleValidation } from "../utils/handleValidation"; //
+import axios from "axios";  // Import axios to make HTTP requests
+import tokenHandler from "../utils/handleToken"; 
+import { handleValidation } from "../utils/handleValidation"; 
 import { Admin } from "../model/adminModel";
 
 const authController: any = {};
 
+// Facebook App ID and Secret (store these in environment variables for security)
+const FACEBOOK_APP_ID = process.env.FACEBOOK_APP_ID || "834398233245197";
+const FACEBOOK_APP_SECRET = process.env.FACEBOOK_APP_SECRET || "a1a0d4fc4e1f92c73251c82dfa456a63";
+
+// Function to verify the Facebook access token
+const verifyFacebookToken = async (token: string) => {
+  try {
+    const response = await axios.get(
+      `https://graph.facebook.com/debug_token?input_token=${token}&access_token=${FACEBOOK_APP_ID}|${FACEBOOK_APP_SECRET}`
+    );
+    return response.data.data;
+  } catch (error) {
+    console.error("Error verifying Facebook token:", error);
+    throw new Error("Invalid Facebook token");
+  }
+};
+
 // Registration Logic
 authController.register = asyncHandler(
   async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    // #swagger.tags = ['Auth']
-    const { username, password } = req.body;
+    const { username, password, facebookToken } = req.body;
 
     try {
-      // Validate the user fields
+      if (facebookToken) {
+        const fbTokenData = await verifyFacebookToken(facebookToken);
+        if (!fbTokenData.is_valid) {
+          res.status(400).json({ message: "Invalid Facebook token" });
+          return; // Exit early here
+        }
+
+        const facebookUserData = await axios.get(
+          `https://graph.facebook.com/me?access_token=${facebookToken}`
+        );
+        console.log(facebookUserData.data);
+      }
+
       const errors: ValidationError[] = await handleValidation(
-        new Admin(), // Validate against Admin model
+        new Admin(),
         req.body,
         res
       );
       if (errors.length > 0) {
-        return; // No need to return anything, just exit the function
+        return;
       }
 
-      // Check if the username is already taken
       const userExists = await Admin.findOne({
         username: (username || "").trim().toLowerCase(),
       });
@@ -38,24 +66,21 @@ authController.register = asyncHandler(
             },
           ],
         });
-        return; // Exit the function after sending the response
+        return; // Exit early here
       }
 
-      // Create a new admin
       const newAdmin = new Admin({
         username: (username || "").trim().toLowerCase(),
-        password, // Store the raw password for hashing
+        password,
       });
 
-      await newAdmin.save(); // Save the admin to the database
+      await newAdmin.save();
 
-      // Generate access token
       const accessToken = tokenHandler.generateToken(
         { id: newAdmin._id, username: newAdmin.username },
         "30d"
       );
 
-      // Send the success response
       res.status(201).json({
         status: "success",
         message: "Registration successful",
@@ -69,20 +94,30 @@ authController.register = asyncHandler(
       });
     } catch (error: any) {
       console.error("Error during admin registration: ", error);
-      next(error);
+      next(error); // No return here, just call next to propagate the error
     }
   }
 );
 
-// Login Logic
 authController.login = asyncHandler(async (req: Request, res: Response) => {
-  // #swagger.tags = ['Auth']
-  const { username, password } = req.body;
+  const { username, password, facebookToken } = req.body;
 
   try {
-    // Validate the user fields
+    if (facebookToken) {
+      const fbTokenData = await verifyFacebookToken(facebookToken);
+      if (!fbTokenData.is_valid) {
+        res.status(400).json({ message: "Invalid Facebook token" });
+        return; // Exit early here
+      }
+
+      const facebookUserData = await axios.get(
+        `https://graph.facebook.com/me?access_token=${facebookToken}`
+      );
+      console.log(facebookUserData.data);
+    }
+
     const errors: ValidationError[] = await handleValidation(
-      new Admin(), // Validate against Admin model
+      new Admin(),
       req.body,
       res
     );
@@ -90,7 +125,6 @@ authController.login = asyncHandler(async (req: Request, res: Response) => {
       return;
     }
 
-    // Check if the username exists
     const admin = await Admin.findOne({
       username: username.trim().toLowerCase(),
     });
@@ -103,10 +137,9 @@ authController.login = asyncHandler(async (req: Request, res: Response) => {
           },
         ],
       });
-      return;
+      return; // Exit early here
     }
 
-    // Validate the password
     const validPassword = await admin.matchPassword(password.trim());
     if (!validPassword) {
       res.status(401).json({
@@ -117,10 +150,9 @@ authController.login = asyncHandler(async (req: Request, res: Response) => {
           },
         ],
       });
-      return;
+      return; // Exit early here
     }
 
-    // Generate a token and send it along with user details
     const accessToken = tokenHandler.generateToken(
       {
         id: admin._id,
@@ -129,7 +161,6 @@ authController.login = asyncHandler(async (req: Request, res: Response) => {
       "1d"
     );
 
-    // Send the success response
     res.status(200).json({
       status: "success",
       message: "Login successful",
@@ -142,7 +173,7 @@ authController.login = asyncHandler(async (req: Request, res: Response) => {
       },
     });
   } catch (error: any) {
-    console.error("Error during admin login:", error); // Log the error for debugging
+    console.error("Error during admin login:", error);
     res.status(500).json({
       errors: [
         {
