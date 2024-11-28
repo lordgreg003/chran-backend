@@ -15,42 +15,56 @@ interface MediaItem {
 const createBlogPost: RequestHandler = asyncHandler(async (req, res) => {
   try {
     const { title, description } = req.body;
+    console.log("Received title:", title);
+    console.log("Received description:", description);
 
-    // Validate title and description
-    if (!title || !description) {
-      return res.status(400).json({ error: "Title and description are required" });
-    }
-
-    // Generate slug and check uniqueness
+    // Generate slug from the title
     const slug = generateSlug(title);
-    const existingPost = await BlogPost.findOne({ slug });
-    if (existingPost) {
-      return res.status(400).json({ error: "A post with this title already exists" });
-    }
+    console.log("Generated slug:", slug);
 
-    // Construct the full URL
+    // Generate the full URL for redirection
     const baseUrl = "https://chran1.vercel.app/blog/";
     const fullUrl = `${baseUrl}${slug}`;
+    console.log("Generated full URL:", fullUrl);
 
-    // Array to store media URLs
-    const media: { url: string; type: string }[] = [];
+    // Array to store media URLs and types
+    const media = [];
 
-    // Handle file uploads
     if (req.files && Array.isArray(req.files)) {
       for (const file of req.files) {
+        console.log("Processing file:", file.originalname);
+        console.log("File MIME type:", file.mimetype);
+
+        // Upload to Cloudinary with resource type auto
         const uploadResult = await new Promise<{ url: string; type: string }>(
           (resolve, reject) => {
             const uploadStream = cloudinary.uploader.upload_stream(
               {
-                resource_type: "auto",
+                resource_type: "auto", // Automatically handle images and videos
                 folder: "blog_posts",
                 transformation: file.mimetype.startsWith("image")
-                  ? [{ width: 300, height: 300, crop: "limit", quality: "auto:best" }]
-                  : undefined,
+                  ? [
+                      {
+                        width: 300,
+                        height: 300,
+                        crop: "limit",
+                        quality: "auto:best",
+                      },
+                    ]
+                  : undefined, // Optional: Add video transformations if needed
               },
               (error, result) => {
-                if (error) reject(new Error("Failed to upload to Cloudinary"));
-                if (result) resolve({ url: result.secure_url, type: result.resource_type });
+                if (error) {
+                  console.error("Cloudinary upload error:", error);
+                  return reject(new Error("Failed to upload to Cloudinary"));
+                }
+                if (result) {
+                  console.log("Cloudinary upload successful, result:", result);
+                  resolve({
+                    url: result.secure_url,
+                    type: result.resource_type,
+                  });
+                }
               }
             );
 
@@ -60,11 +74,14 @@ const createBlogPost: RequestHandler = asyncHandler(async (req, res) => {
           }
         );
 
+        // Add the uploaded media info to the media array
         media.push(uploadResult);
       }
+    } else {
+      console.log("No files uploaded or files array is not an array.");
     }
 
-    // Create a new blog post
+    // Create a new blog post with the generated slug, full URL, and media array
     const newPost = new BlogPost({
       title,
       description,
@@ -72,30 +89,39 @@ const createBlogPost: RequestHandler = asyncHandler(async (req, res) => {
       media,
       fullUrl,
     });
+
+    // Save to MongoDB
     await newPost.save();
 
-    // Notify external services
-    const webhookUrl = "https://hook.eu2.make.com/23gt24xaj83x26hf1odsxl92lrji6mrk";
-    await axios.post(webhookUrl, { title, description, slug, media, fullUrl });
+    const webhookUrl =
+      "https://hook.eu2.make.com/23gt24xaj83x26hf1odsxl92lrji6mrk";
 
-    // Respond with JSON and metadata
-    res.status(201).json({
-      message: "Blog post created successfully",
-      post: {
-        id: newPost._id,
-        title: newPost.title,
-        description: newPost.description,
-        slug: newPost.slug,
-        fullUrl: newPost.fullUrl,
-        media: newPost.media,
-      },
+    await axios.post(webhookUrl, {
+      title,
+      description,
+      slug,
+      media,
+      fullUrl,
     });
+
+    res.render("blogPost", {
+      title,
+      description,
+      imageUrl:
+        media.length > 0
+          ? media[0].url
+          : "https://res.cloudinary.com/dg8cmo2gb/image/upload/v1732618339/blog_posts/g12wzcr5gw1po9c80zqr.jpg",
+      fullUrl,
+    });
+
+    res
+      .status(201)
+      .json({ message: "Blog post created successfully", newPost });
   } catch (error) {
     console.error("Error creating blog post:", error);
     res.status(500).json({ error: "Error creating blog post" });
   }
 });
-
 
 // Get all blog posts
 const getAllBlogPosts = asyncHandler(
@@ -131,24 +157,22 @@ const getAllBlogPosts = asyncHandler(
 );
 
 // Get a blog post by ID
-const getBlogPostById = asyncHandler(
+const getBlogPostBySlug = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const { id } = req.params; // Get the ID from the request parameters
+    const { slug } = req.params; // Extract the slug from the request parameters
 
     try {
-      const blogPost = await BlogPost.findById(id); // Fetch the blog post by ID
+      // Fetch the blog post by slug
+      const blogPost = await BlogPost.findOne({ slug });
 
       if (!blogPost) {
-        res.status(404).json({ message: "Blog post not found" }); // If not found, return 404
+        res.status(404).json({ message: "Blog post not found" });
         return;
       }
 
-      res.status(200).json(blogPost); // Send the blog post as a response
+      res.status(200).json(blogPost);
     } catch (error: any) {
-      console.error("Error fetching blog post:", error);
-      res
-        .status(500)
-        .json({ message: "Error fetching blog post", error: error.message });
+      res.status(500).json({ message: "Error fetching blog post", error: error.message });
     }
   }
 );
@@ -261,7 +285,7 @@ const deleteBlogPost: RequestHandler = asyncHandler(async (req, res, next) => {
 export {
   createBlogPost,
   getAllBlogPosts,
-  getBlogPostById,
+  getBlogPostBySlug,
   updateBlogPost,
   deleteBlogPost,
 };
