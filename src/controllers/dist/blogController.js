@@ -43,7 +43,7 @@ var __spreadArrays = (this && this.__spreadArrays) || function () {
     return r;
 };
 exports.__esModule = true;
-exports.deleteBlogPost = exports.updateBlogPost = exports.getBlogPostById = exports.getAllBlogPosts = exports.createBlogPost = void 0;
+exports.deleteBlogPost = exports.updateBlogPost = exports.getBlogPostBySlug = exports.getAllBlogPosts = exports.createBlogPost = void 0;
 var express_async_handler_1 = require("express-async-handler");
 var BlogPost_1 = require("../model/BlogPost");
 var cloudinary_1 = require("../config/cloudinary");
@@ -151,22 +151,13 @@ var createBlogPost = express_async_handler_1["default"](function (req, res) { re
                     })];
             case 8:
                 _c.sent();
-                // Render the blog post page with metadata
                 res.render("blogPost", {
                     title: title,
                     description: description,
                     imageUrl: media.length > 0
                         ? media[0].url
                         : "https://res.cloudinary.com/dg8cmo2gb/image/upload/v1732618339/blog_posts/g12wzcr5gw1po9c80zqr.jpg",
-                    fullUrl: fullUrl,
-                    metaTags: {
-                        ogTitle: title,
-                        ogDescription: description,
-                        ogImage: media.length > 0
-                            ? media[0].url
-                            : "https://res.cloudinary.com/dg8cmo2gb/image/upload/v1732618339/blog_posts/g12wzcr5gw1po9c80zqr.jpg",
-                        ogUrl: fullUrl
-                    }
+                    fullUrl: fullUrl
                 });
                 res
                     .status(201)
@@ -182,7 +173,6 @@ var createBlogPost = express_async_handler_1["default"](function (req, res) { re
     });
 }); });
 exports.createBlogPost = createBlogPost;
-z;
 // Get all blog posts
 var getAllBlogPosts = express_async_handler_1["default"](function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
     var search, page, limit, skip, query, _a, blogPosts, total, error_2;
@@ -223,36 +213,33 @@ var getAllBlogPosts = express_async_handler_1["default"](function (req, res) { r
 }); });
 exports.getAllBlogPosts = getAllBlogPosts;
 // Get a blog post by ID
-var getBlogPostById = express_async_handler_1["default"](function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
-    var id, blogPost, error_3;
+var getBlogPostBySlug = express_async_handler_1["default"](function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
+    var slug, blogPost, error_3;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
-                id = req.params.id;
+                slug = req.params.slug;
                 _a.label = 1;
             case 1:
                 _a.trys.push([1, 3, , 4]);
-                return [4 /*yield*/, BlogPost_1.BlogPost.findById(id)];
+                return [4 /*yield*/, BlogPost_1.BlogPost.findOne({ slug: slug })];
             case 2:
                 blogPost = _a.sent();
                 if (!blogPost) {
-                    res.status(404).json({ message: "Blog post not found" }); // If not found, return 404
+                    res.status(404).json({ message: "Blog post not found" });
                     return [2 /*return*/];
                 }
-                res.status(200).json(blogPost); // Send the blog post as a response
+                res.status(200).json(blogPost);
                 return [3 /*break*/, 4];
             case 3:
                 error_3 = _a.sent();
-                console.error("Error fetching blog post:", error_3);
-                res
-                    .status(500)
-                    .json({ message: "Error fetching blog post", error: error_3.message });
+                res.status(500).json({ message: "Error fetching blog post", error: error_3.message });
                 return [3 /*break*/, 4];
             case 4: return [2 /*return*/];
         }
     });
 }); });
-exports.getBlogPostById = getBlogPostById;
+exports.getBlogPostBySlug = getBlogPostBySlug;
 // Update a blog post by ID
 var updateBlogPost = express_async_handler_1["default"](function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
     var id, _a, title, description, updatedMedia_1, blogPost, currentMedia, newMedia, _loop_2, _i, _b, file, _c, currentMedia_1, mediaItem, publicId, updatedPost, error_4;
