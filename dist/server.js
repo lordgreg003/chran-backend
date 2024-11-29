@@ -47,7 +47,16 @@ app.set("view engine", "ejs");
 app.set("views", path_1.default.join(__dirname, "views"));
 // Use blog routes
 app.get("/", (req, res) => {
-    res.render("blogPost");
+    const title = "My Awesome Blog Post"; // Replace with actual title from database
+    const description = "This is a detailed description of the blog post."; // Replace with actual description
+    const imageUrl = "https://example.com/image.jpg"; // Replace with actual image URL
+    const fullUrl = `https://example.com/blog/${req.params.slug}`;
+    res.render("blogPost", {
+        title,
+        description,
+        imageUrl,
+        fullUrl,
+    });
 });
 app.use("/api/blogs", blogRoutes_1.default);
 app.use("/admin/", adminRoutes_1.default);

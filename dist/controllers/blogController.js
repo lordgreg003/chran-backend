@@ -35,7 +35,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteBlogPost = exports.updateBlogPost = exports.getBlogPostById = exports.getAllBlogPosts = exports.createBlogPost = void 0;
+exports.deleteBlogPost = exports.updateBlogPost = exports.getBlogPostBySlug = exports.getAllBlogPosts = exports.createBlogPost = void 0;
 const express_async_handler_1 = __importDefault(require("express-async-handler"));
 const BlogPost_1 = require("../model/BlogPost");
 const cloudinary_1 = __importDefault(require("../config/cloudinary"));
@@ -122,7 +122,7 @@ const createBlogPost = (0, express_async_handler_1.default)((req, res) => __awai
             description,
             imageUrl: media.length > 0
                 ? media[0].url
-                : "https://default-image-url.com/placeholder.jpg",
+                : "https://res.cloudinary.com/dg8cmo2gb/image/upload/v1732618339/blog_posts/g12wzcr5gw1po9c80zqr.jpg",
             fullUrl,
         });
         res
@@ -165,24 +165,22 @@ const getAllBlogPosts = (0, express_async_handler_1.default)((req, res) => __awa
 }));
 exports.getAllBlogPosts = getAllBlogPosts;
 // Get a blog post by ID
-const getBlogPostById = (0, express_async_handler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { id } = req.params; // Get the ID from the request parameters
+const getBlogPostBySlug = (0, express_async_handler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { slug } = req.params; // Extract the slug from the request parameters
     try {
-        const blogPost = yield BlogPost_1.BlogPost.findById(id); // Fetch the blog post by ID
+        // Fetch the blog post by slug
+        const blogPost = yield BlogPost_1.BlogPost.findOne({ slug });
         if (!blogPost) {
-            res.status(404).json({ message: "Blog post not found" }); // If not found, return 404
+            res.status(404).json({ message: "Blog post not found" });
             return;
         }
-        res.status(200).json(blogPost); // Send the blog post as a response
+        res.status(200).json(blogPost);
     }
     catch (error) {
-        console.error("Error fetching blog post:", error);
-        res
-            .status(500)
-            .json({ message: "Error fetching blog post", error: error.message });
+        res.status(500).json({ message: "Error fetching blog post", error: error.message });
     }
 }));
-exports.getBlogPostById = getBlogPostById;
+exports.getBlogPostBySlug = getBlogPostBySlug;
 // Update a blog post by ID
 const updateBlogPost = (0, express_async_handler_1.default)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
