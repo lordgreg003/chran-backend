@@ -12,7 +12,7 @@ const router = express_1.default.Router();
 router.post("/", multerConfig_1.upload.array("media", 3), blogController_1.createBlogPost);
 // Route to get all blog posts
 router.get("/", blogController_1.getAllBlogPosts);
-router.get("/:id", blogController_1.getBlogPostById);
+router.get("/:slug", blogController_1.getBlogPostBySlug);
 router.put("/:id", multerConfig_1.upload.array("media", 3), blogController_1.updateBlogPost);
 // Route to delete a blog post by ID
 router.delete("/:id", blogController_1.deleteBlogPost);
