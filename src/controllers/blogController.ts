@@ -26,8 +26,7 @@ const createBlogPost: RequestHandler = asyncHandler(async (req, res) => {
     const baseUrl = "https://chran1.vercel.app/blog/";
     const fullUrl = `${baseUrl}${slug}`;
     console.log("Generated full URL:", fullUrl);
-
-    // Array to store media URLs and types
+ 
     const media = [];
 
     if (req.files && Array.isArray(req.files)) {
