@@ -1,16 +1,19 @@
 "use strict";
-// utils/slugify.ts
 exports.__esModule = true;
 exports.generateSlug = void 0;
-/**
- * Generates a URL-friendly slug from a string
- * @param text - The input string to be converted into a slug
- * @returns A URL-friendly slug
- */
-exports.generateSlug = function (text) {
-    return text
+// utils/slugify.ts
+exports.generateSlug = function (title) {
+    // Clean the title to make it URL-friendly
+    var baseSlug = title
         .toLowerCase()
         .trim()
-        .replace(/[\s\W-]+/g, "-") // Replace spaces, non-word characters, and hyphens with a single hyphen
-        .replace(/^-+|-+$/g, ""); // Remove leading or trailing hyphens
+        .replace(/[^a-z0-9\s-]/g, "") // Remove special characters
+        .replace(/\s+/g, "-") // Replace spaces with dashes
+        .replace(/-+/g, "-"); // Replace multiple dashes with a single dash
+    // Generate random number between 1 and 1000
+    var randomNum = Math.floor(Math.random() * 1000) + 1;
+    // Generate random letters (2 characters)
+    var randomLetters = String.fromCharCode(97 + Math.floor(Math.random() * 26), 97 + Math.floor(Math.random() * 26));
+    // Combine with the slug
+    return randomNum + "-" + randomLetters + "-" + baseSlug + "-" + randomNum;
 };

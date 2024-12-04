@@ -4,7 +4,7 @@ import {
   createBlogPost,
   deleteBlogPost,
   getAllBlogPosts,
-  getBlogPostBySlug,
+  getBlogPostById,
   updateBlogPost,
 } from "../controllers/blogController";
 import { upload } from "../config/multerConfig";
@@ -17,7 +17,7 @@ router.post("/", upload.array("media", 3), createBlogPost);
 // Route to get all blog posts
 router.get("/", getAllBlogPosts);
 
-router.get("/:slug", getBlogPostBySlug);
+router.get("/:id", getBlogPostById);
 
 router.put("/:id", upload.array("media", 3),  updateBlogPost);
 
