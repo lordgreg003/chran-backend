@@ -11,8 +11,6 @@ var BlogPostSchema = new mongoose_1.Schema({
             type: { type: String }
         },
     ],
-    slug: { type: String, unique: true, required: true },
-    fullUrl: { type: String, unique: true, required: true },
     mediaType: { type: String },
     createdAt: { type: Date, "default": Date.now }
 });

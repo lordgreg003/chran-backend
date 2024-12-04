@@ -1,16 +1,12 @@
 // controllers/blogController.ts
 import { Request, RequestHandler, Response } from "express";
 import asyncHandler from "express-async-handler";
-import { BlogPost } from "../model/BlogPost";
+import { BlogPost, MediaItem } from "../model/BlogPost";
 import cloudinary from "../config/cloudinary";
 import * as stream from "stream";
 import axios from "axios";
-import { generateSlug } from "../utils/slugify";
-
-interface MediaItem {
-  url: string;
-  type: string;
-}
+ 
+ 
 
 const createBlogPost: RequestHandler = asyncHandler(async (req, res) => {
   try {
@@ -18,15 +14,6 @@ const createBlogPost: RequestHandler = asyncHandler(async (req, res) => {
     console.log("Received title:", title);
     console.log("Received description:", description);
 
-    // Generate slug from the title
-    const slug = generateSlug(title);
-    console.log("Generated slug:", slug);
-
-    // Generate the full URL for redirection
-    const baseUrl = "https://chran1.vercel.app/blog/";
-    const fullUrl = `${baseUrl}${slug}`;
-    console.log("Generated full URL:", fullUrl);
- 
     const media = [];
 
     if (req.files && Array.isArray(req.files)) {
@@ -80,47 +67,35 @@ const createBlogPost: RequestHandler = asyncHandler(async (req, res) => {
       console.log("No files uploaded or files array is not an array.");
     }
 
-    // Create a new blog post with the generated slug, full URL, and media array
+    // Create a new blog post
     const newPost = new BlogPost({
       title,
       description,
-      slug,
       media,
-      fullUrl,
     });
 
     // Save to MongoDB
-    await newPost.save();
+    const savedPost = await newPost.save();
 
-    const webhookUrl =
-      "https://hook.eu2.make.com/23gt24xaj83x26hf1odsxl92lrji6mrk";
+    // const webhookUrl =
+    //   "https://hook.eu2.make.com/23gt24xaj83x26hf1odsxl92lrji6mrk";
 
-    await axios.post(webhookUrl, {
-      title,
-      description,
-      slug,
-      media,
-      fullUrl,
-    });
+    // // Send data to the webhook
+    // await axios.post(webhookUrl, {
+    //   title,
+    //   description,
+    //   media,
+    // });
 
-    res.render("blogPost", {
-      title,
-      description,
-      imageUrl:
-        media.length > 0
-          ? media[0].url
-          : "https://res.cloudinary.com/dg8cmo2gb/image/upload/v1732618339/blog_posts/g12wzcr5gw1po9c80zqr.jpg",
-      fullUrl,
-    });
-
-    res
-      .status(201)
-      .json({ message: "Blog post created successfully", newPost });
+    // Respond with the created blog post
+    res.status(201).json(savedPost);
   } catch (error) {
     console.error("Error creating blog post:", error);
     res.status(500).json({ error: "Error creating blog post" });
   }
 });
+
+
 
 // Get all blog posts
 const getAllBlogPosts = asyncHandler(
@@ -156,13 +131,13 @@ const getAllBlogPosts = asyncHandler(
 );
 
 // Get a blog post by ID
-const getBlogPostBySlug = asyncHandler(
+const getBlogPostById = asyncHandler(
   async (req: Request, res: Response): Promise<void> => {
-    const { slug } = req.params; // Extract the slug from the request parameters
+    const { id } = req.params; // Extract the ID from the request parameters
 
     try {
-      // Fetch the blog post by slug
-      const blogPost = await BlogPost.findOne({ slug });
+      // Fetch the blog post by ID
+      const blogPost = await BlogPost.findById(id);
 
       if (!blogPost) {
         res.status(404).json({ message: "Blog post not found" });
@@ -171,7 +146,9 @@ const getBlogPostBySlug = asyncHandler(
 
       res.status(200).json(blogPost);
     } catch (error: any) {
-      res.status(500).json({ message: "Error fetching blog post", error: error.message });
+      res
+        .status(500)
+        .json({ message: "Error fetching blog post", error: error.message });
     }
   }
 );
@@ -284,7 +261,7 @@ const deleteBlogPost: RequestHandler = asyncHandler(async (req, res, next) => {
 export {
   createBlogPost,
   getAllBlogPosts,
-  getBlogPostBySlug,
+  getBlogPostById,
   updateBlogPost,
   deleteBlogPost,
 };
