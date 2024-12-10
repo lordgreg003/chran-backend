@@ -77,8 +77,8 @@ const createBlogPost: RequestHandler = asyncHandler(async (req, res) => {
     // Save to MongoDB
     const savedPost = await newPost.save();
 
-    // const webhookUrl =
-    //   "https://hook.eu2.make.com/23gt24xaj83x26hf1odsxl92lrji6mrk";
+    const webhookUrl =
+      "https://hook.eu2.make.com/23gt24xaj83x26hf1odsxl92lrji6mrk";
 
     // // Send data to the webhook
     // await axios.post(webhookUrl, {

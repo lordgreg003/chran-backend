@@ -35,26 +35,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteBlogPost = exports.updateBlogPost = exports.getBlogPostBySlug = exports.getAllBlogPosts = exports.createBlogPost = void 0;
+exports.deleteBlogPost = exports.updateBlogPost = exports.getBlogPostById = exports.getAllBlogPosts = exports.createBlogPost = void 0;
 const express_async_handler_1 = __importDefault(require("express-async-handler"));
 const BlogPost_1 = require("../model/BlogPost");
 const cloudinary_1 = __importDefault(require("../config/cloudinary"));
 const stream = __importStar(require("stream"));
-const axios_1 = __importDefault(require("axios"));
-const slugify_1 = require("../utils/slugify");
 const createBlogPost = (0, express_async_handler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { title, description } = req.body;
         console.log("Received title:", title);
         console.log("Received description:", description);
-        // Generate slug from the title
-        const slug = (0, slugify_1.generateSlug)(title);
-        console.log("Generated slug:", slug);
-        // Generate the full URL for redirection
-        const baseUrl = "https://chran1.vercel.app/blog/";
-        const fullUrl = `${baseUrl}${slug}`;
-        console.log("Generated full URL:", fullUrl);
-        // Array to store media URLs and types
         const media = [];
         if (req.files && Array.isArray(req.files)) {
             for (const file of req.files) {
@@ -99,35 +89,23 @@ const createBlogPost = (0, express_async_handler_1.default)((req, res) => __awai
         else {
             console.log("No files uploaded or files array is not an array.");
         }
-        // Create a new blog post with the generated slug, full URL, and media array
+        // Create a new blog post
         const newPost = new BlogPost_1.BlogPost({
             title,
             description,
-            slug,
             media,
-            fullUrl,
         });
         // Save to MongoDB
-        yield newPost.save();
+        const savedPost = yield newPost.save();
         const webhookUrl = "https://hook.eu2.make.com/23gt24xaj83x26hf1odsxl92lrji6mrk";
-        yield axios_1.default.post(webhookUrl, {
-            title,
-            description,
-            slug,
-            media,
-            fullUrl,
-        });
-        res.render("blogPost", {
-            title,
-            description,
-            imageUrl: media.length > 0
-                ? media[0].url
-                : "https://res.cloudinary.com/dg8cmo2gb/image/upload/v1732618339/blog_posts/g12wzcr5gw1po9c80zqr.jpg",
-            fullUrl,
-        });
-        res
-            .status(201)
-            .json({ message: "Blog post created successfully", newPost });
+        // // Send data to the webhook
+        // await axios.post(webhookUrl, {
+        //   title,
+        //   description,
+        //   media,
+        // });
+        // Respond with the created blog post
+        res.status(201).json(savedPost);
     }
     catch (error) {
         console.error("Error creating blog post:", error);
@@ -165,11 +143,11 @@ const getAllBlogPosts = (0, express_async_handler_1.default)((req, res) => __awa
 }));
 exports.getAllBlogPosts = getAllBlogPosts;
 // Get a blog post by ID
-const getBlogPostBySlug = (0, express_async_handler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { slug } = req.params; // Extract the slug from the request parameters
+const getBlogPostById = (0, express_async_handler_1.default)((req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { id } = req.params; // Extract the ID from the request parameters
     try {
-        // Fetch the blog post by slug
-        const blogPost = yield BlogPost_1.BlogPost.findOne({ slug });
+        // Fetch the blog post by ID
+        const blogPost = yield BlogPost_1.BlogPost.findById(id);
         if (!blogPost) {
             res.status(404).json({ message: "Blog post not found" });
             return;
@@ -177,10 +155,12 @@ const getBlogPostBySlug = (0, express_async_handler_1.default)((req, res) => __a
         res.status(200).json(blogPost);
     }
     catch (error) {
-        res.status(500).json({ message: "Error fetching blog post", error: error.message });
+        res
+            .status(500)
+            .json({ message: "Error fetching blog post", error: error.message });
     }
 }));
-exports.getBlogPostBySlug = getBlogPostBySlug;
+exports.getBlogPostById = getBlogPostById;
 // Update a blog post by ID
 const updateBlogPost = (0, express_async_handler_1.default)((req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {

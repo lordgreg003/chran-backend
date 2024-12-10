@@ -49,7 +49,7 @@ var BlogPost_1 = require("../model/BlogPost");
 var cloudinary_1 = require("../config/cloudinary");
 var stream = require("stream");
 var createBlogPost = express_async_handler_1["default"](function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var _a, title, description, media, _loop_1, _i, _b, file, newPost, savedPost, error_1;
+    var _a, title, description, media, _loop_1, _i, _b, file, newPost, savedPost, webhookUrl, error_1;
     return __generator(this, function (_c) {
         switch (_c.label) {
             case 0:
@@ -130,8 +130,7 @@ var createBlogPost = express_async_handler_1["default"](function (req, res) { re
                 return [4 /*yield*/, newPost.save()];
             case 7:
                 savedPost = _c.sent();
-                // const webhookUrl =
-                //   "https://hook.eu2.make.com/23gt24xaj83x26hf1odsxl92lrji6mrk";
+                webhookUrl = "https://hook.eu2.make.com/23gt24xaj83x26hf1odsxl92lrji6mrk";
                 // // Send data to the webhook
                 // await axios.post(webhookUrl, {
                 //   title,
