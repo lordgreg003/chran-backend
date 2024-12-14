@@ -10,7 +10,7 @@ const storage = multer_1.default.memoryStorage();
 exports.upload = (0, multer_1.default)({
     storage,
     limits: {
-        fileSize: 100 * 1024 * 1024, // Allow up to 100MB per file
+        fileSize: 2000 * 1024 * 1024, // Allow up to 2000MB (2GB) per file
     },
     fileFilter: (req, file, cb) => {
         console.log("File MIME type:", file.mimetype); // Log the MIME type for debugging

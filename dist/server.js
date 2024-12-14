@@ -34,6 +34,7 @@ const cors_1 = __importDefault(require("cors"));
 const body_parser_1 = __importDefault(require("body-parser"));
 const blogRoutes_1 = __importDefault(require("./routes/blogRoutes"));
 const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
+const articleRoutes_1 = __importDefault(require("./routes/articleRoutes"));
 const errorMiddleware_1 = __importDefault(require("./middlewares/errorMiddleware"));
 const connectDB_1 = __importDefault(require("./config/connectDB"));
 // Connect to the database
@@ -59,6 +60,7 @@ app.get("/", (req, res) => {
     });
 });
 app.use("/api/blogs", blogRoutes_1.default);
+app.use("/api/article", articleRoutes_1.default);
 app.use("/admin/", adminRoutes_1.default);
 // Error handling middleware
 app.use(errorMiddleware_1.default.notFound);
