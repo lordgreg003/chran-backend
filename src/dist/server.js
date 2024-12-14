@@ -8,6 +8,7 @@ var cors_1 = require("cors");
 var body_parser_1 = require("body-parser");
 var blogRoutes_1 = require("./routes/blogRoutes");
 var adminRoutes_1 = require("./routes/adminRoutes");
+var articleRoutes_1 = require("./routes/articleRoutes");
 var errorMiddleware_1 = require("./middlewares/errorMiddleware");
 var connectDB_1 = require("./config/connectDB");
 // Connect to the database
@@ -33,6 +34,7 @@ app.get("/", function (req, res) {
     });
 });
 app.use("/api/blogs", blogRoutes_1["default"]);
+app.use("/api/article", articleRoutes_1["default"]);
 app.use("/admin/", adminRoutes_1["default"]);
 // Error handling middleware
 app.use(errorMiddleware_1["default"].notFound);

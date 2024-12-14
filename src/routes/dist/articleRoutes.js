@@ -1,0 +1,11 @@
+"use strict";
+exports.__esModule = true;
+var express_1 = require("express");
+var articleController_1 = require("../controllers/articleController");
+var router = express_1["default"].Router();
+router.post("/", articleController_1.createArticle);
+router.get("/", articleController_1.getAllArticles);
+router.get("/:id", articleController_1.getArticleById);
+router.put("/:id", articleController_1.updateArticle);
+router["delete"]("/:id", articleController_1.deleteArticle);
+exports["default"] = router;

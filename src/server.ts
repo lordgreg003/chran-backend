@@ -2,11 +2,11 @@ import express, { Application, Request, Response } from "express";
 import * as dotenv from "dotenv";
 dotenv.config();
 import path from "path";
-
 import cors from "cors";
 import bodyParser from "body-parser";
 import blogRoutes from "./routes/blogRoutes";
 import authRoutes from "./routes/adminRoutes";
+import articleRoutes from "./routes/articleRoutes";
 import errorMiddleware from "./middlewares/errorMiddleware";
 import connectDB from "./config/connectDB";
 
@@ -36,6 +36,7 @@ app.get("/", (req: Request, res: Response) => {
   });
 });
 app.use("/api/blogs", blogRoutes);
+app.use("/api/article", articleRoutes)
 app.use("/admin/", authRoutes);
 
 // Error handling middleware
