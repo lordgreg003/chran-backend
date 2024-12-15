@@ -48,87 +48,8 @@ var express_async_handler_1 = require("express-async-handler");
 var BlogPost_1 = require("../model/BlogPost");
 var cloudinary_1 = require("../config/cloudinary");
 var stream = require("stream");
-var fs_1 = require("fs");
-var handbrake_js_1 = require("handbrake-js"); // Import HandBrake-js
-var path_1 = require("path");
-var os_1 = require("os");
-// Function to save buffer to a temp file
-var saveBufferToTempFile = function (buffer, extension) {
-    var tempFilePath = path_1["default"].join(os_1["default"].tmpdir(), Date.now() + "." + extension);
-    fs_1["default"].writeFileSync(tempFilePath, buffer);
-    return tempFilePath;
-};
-// Function to compress video
-var compressVideo = function (inputPath, outputPath) { return __awaiter(void 0, void 0, Promise, function () {
-    return __generator(this, function (_a) {
-        return [2 /*return*/, new Promise(function (resolve, reject) {
-                handbrake_js_1["default"].spawn({
-                    input: inputPath,
-                    output: outputPath,
-                    preset: "Very Fast 1080p30",
-                    quality: 20,
-                    audio: "aac",
-                    width: 1280,
-                    rate: 30
-                })
-                    .on("progress", function (progress) {
-                    console.log("Compression progress: " + progress.percentComplete.toFixed(2) + "%");
-                })
-                    .on("error", reject)
-                    .on("end", resolve);
-            })];
-    });
-}); };
-// Retry logic for uploading to Cloudinary
-var retryUpload = function (buffer, retries) {
-    if (retries === void 0) { retries = 3; }
-    return __awaiter(void 0, void 0, Promise, function () {
-        var i, error_1;
-        return __generator(this, function (_a) {
-            switch (_a.label) {
-                case 0:
-                    i = 0;
-                    _a.label = 1;
-                case 1:
-                    if (!(i < retries)) return [3 /*break*/, 6];
-                    _a.label = 2;
-                case 2:
-                    _a.trys.push([2, 4, , 5]);
-                    return [4 /*yield*/, new Promise(function (resolve, reject) {
-                            var uploadStream = cloudinary_1["default"].uploader.upload_stream({
-                                resource_type: "video",
-                                folder: "blog_posts",
-                                timeout: 120000
-                            }, function (error, result) {
-                                if (error) {
-                                    return reject(error);
-                                }
-                                if (result && result.secure_url && result.resource_type) {
-                                    resolve({ url: result.secure_url, type: result.resource_type });
-                                }
-                                else {
-                                    reject(new Error("Invalid Cloudinary response"));
-                                }
-                            });
-                            var bufferStream = new stream.PassThrough();
-                            bufferStream.end(buffer);
-                            bufferStream.pipe(uploadStream);
-                        })];
-                case 3: return [2 /*return*/, _a.sent()];
-                case 4:
-                    error_1 = _a.sent();
-                    console.error("Upload attempt " + (i + 1) + " failed:", error_1);
-                    return [3 /*break*/, 5];
-                case 5:
-                    i++;
-                    return [3 /*break*/, 1];
-                case 6: throw new Error("Failed to upload to Cloudinary after retries");
-            }
-        });
-    });
-};
 var createBlogPost = express_async_handler_1["default"](function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var _a, title, description, media, _loop_1, _i, _b, file, newPost, savedPost, error_2;
+    var _a, title, description, media, _loop_1, _i, _b, file, newPost, savedPost, error_1;
     return __generator(this, function (_c) {
         switch (_c.label) {
             case 0:
@@ -139,75 +60,49 @@ var createBlogPost = express_async_handler_1["default"](function (req, res) { re
                 media = [];
                 if (!(req.files && Array.isArray(req.files))) return [3 /*break*/, 5];
                 _loop_1 = function (file) {
-                    var tempInputFilePath, compressionMessage, targetSize, tempOutputFilePath, compressedVideoBuffer, uploadResult, uploadResult;
+                    var uploadResult;
                     return __generator(this, function (_a) {
                         switch (_a.label) {
                             case 0:
                                 console.log("Processing file:", file.originalname);
                                 console.log("File MIME type:", file.mimetype);
-                                if (!file.mimetype.startsWith("video")) return [3 /*break*/, 3];
-                                tempInputFilePath = saveBufferToTempFile(file.buffer, "mp4");
-                                compressionMessage = "Video above 100MB will start compressing.";
-                                targetSize = 100 * 1024 * 1024;
-                                if (file.size < targetSize) {
-                                    compressionMessage = "Video below 100MB, compressing.";
-                                    targetSize = 0; // No target size for videos below 100MB
-                                }
-                                console.log(compressionMessage);
-                                tempOutputFilePath = path_1["default"].join(os_1["default"].tmpdir(), Date.now() + "_compressed.mp4");
-                                // Start compression (no size target if it's below 100MB)
-                                return [4 /*yield*/, compressVideo(tempInputFilePath, tempOutputFilePath)];
+                                return [4 /*yield*/, new Promise(function (resolve, reject) {
+                                        var uploadStream = cloudinary_1["default"].uploader.upload_stream({
+                                            resource_type: "auto",
+                                            folder: "blog_posts",
+                                            transformation: file.mimetype.startsWith("image")
+                                                ? [
+                                                    {
+                                                        width: 300,
+                                                        height: 300,
+                                                        crop: "limit",
+                                                        quality: "auto:best"
+                                                    },
+                                                ]
+                                                : undefined,
+                                            timeout: 60000
+                                        }, function (error, result) {
+                                            if (error) {
+                                                console.error("Cloudinary upload error:", error);
+                                                return reject(new Error("Failed to upload to Cloudinary"));
+                                            }
+                                            if (result) {
+                                                console.log("Cloudinary upload successful, result:", result);
+                                                resolve({
+                                                    url: result.secure_url,
+                                                    type: result.resource_type
+                                                });
+                                            }
+                                        });
+                                        var bufferStream = new stream.PassThrough();
+                                        bufferStream.end(file.buffer);
+                                        bufferStream.pipe(uploadStream);
+                                    })];
                             case 1:
-                                // Start compression (no size target if it's below 100MB)
-                                _a.sent();
-                                compressedVideoBuffer = fs_1["default"].readFileSync(tempOutputFilePath);
-                                return [4 /*yield*/, retryUpload(compressedVideoBuffer)];
-                            case 2:
                                 uploadResult = _a.sent();
+                                // Add the uploaded media info to the media array
                                 media.push(uploadResult);
-                                // Clean up temporary files
-                                fs_1["default"].unlinkSync(tempInputFilePath);
-                                fs_1["default"].unlinkSync(tempOutputFilePath);
-                                return [3 /*break*/, 5];
-                            case 3: return [4 /*yield*/, new Promise(function (resolve, reject) {
-                                    var uploadStream = cloudinary_1["default"].uploader.upload_stream({
-                                        resource_type: "auto",
-                                        folder: "blog_posts",
-                                        transformation: file.mimetype.startsWith("image")
-                                            ? [
-                                                {
-                                                    width: 300,
-                                                    height: 300,
-                                                    crop: "limit",
-                                                    quality: "auto:best"
-                                                },
-                                            ]
-                                            : undefined
-                                    }, function (error, result) {
-                                        if (error) {
-                                            console.error("Cloudinary upload error:", error);
-                                            return reject(new Error("Failed to upload to Cloudinary"));
-                                        }
-                                        if (result && result.secure_url && result.resource_type) {
-                                            console.log("Cloudinary upload successful, result:", result);
-                                            resolve({
-                                                url: result.secure_url,
-                                                type: result.resource_type
-                                            });
-                                        }
-                                        else {
-                                            reject(new Error("Invalid Cloudinary response"));
-                                        }
-                                    });
-                                    var bufferStream = new stream.PassThrough();
-                                    bufferStream.end(file.buffer);
-                                    bufferStream.pipe(uploadStream);
-                                })];
-                            case 4:
-                                uploadResult = _a.sent();
-                                media.push(uploadResult);
-                                _a.label = 5;
-                            case 5: return [2 /*return*/];
+                                return [2 /*return*/];
                         }
                     });
                 };
@@ -236,12 +131,20 @@ var createBlogPost = express_async_handler_1["default"](function (req, res) { re
                 return [4 /*yield*/, newPost.save()];
             case 7:
                 savedPost = _c.sent();
+                // const webhookUrl =
+                //   "https://hook.eu2.make.com/23gt24xaj83x26hf1odsxl92lrji6mrk";
+                // // Send data to the webhook
+                // await axios.post(webhookUrl, {
+                //   title,
+                //   description,
+                //   media,
+                // });
                 // Respond with the created blog post
                 res.status(201).json(savedPost);
                 return [3 /*break*/, 9];
             case 8:
-                error_2 = _c.sent();
-                console.error("Error creating blog post:", error_2);
+                error_1 = _c.sent();
+                console.error("Error creating blog post:", error_1);
                 res.status(500).json({ error: "Error creating blog post" });
                 return [3 /*break*/, 9];
             case 9: return [2 /*return*/];
@@ -251,7 +154,7 @@ var createBlogPost = express_async_handler_1["default"](function (req, res) { re
 exports.createBlogPost = createBlogPost;
 // Get all blog posts
 var getAllBlogPosts = express_async_handler_1["default"](function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
-    var search, page, limit, skip, query, _a, blogPosts, total, error_3;
+    var search, page, limit, skip, query, _a, blogPosts, total, error_2;
     return __generator(this, function (_b) {
         switch (_b.label) {
             case 0:
@@ -279,8 +182,8 @@ var getAllBlogPosts = express_async_handler_1["default"](function (req, res) { r
                 });
                 return [3 /*break*/, 3];
             case 2:
-                error_3 = _b.sent();
-                console.error("Error fetching blog posts:", error_3);
+                error_2 = _b.sent();
+                console.error("Error fetching blog posts:", error_2);
                 res.status(500).json({ message: "Error fetching blog posts" });
                 return [3 /*break*/, 3];
             case 3: return [2 /*return*/];
@@ -290,7 +193,7 @@ var getAllBlogPosts = express_async_handler_1["default"](function (req, res) { r
 exports.getAllBlogPosts = getAllBlogPosts;
 // Get a blog post by ID
 var getBlogPostById = express_async_handler_1["default"](function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
-    var id, blogPost, error_4;
+    var id, blogPost, error_3;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
@@ -308,10 +211,10 @@ var getBlogPostById = express_async_handler_1["default"](function (req, res) { r
                 res.status(200).json(blogPost);
                 return [3 /*break*/, 4];
             case 3:
-                error_4 = _a.sent();
+                error_3 = _a.sent();
                 res
                     .status(500)
-                    .json({ message: "Error fetching blog post", error: error_4.message });
+                    .json({ message: "Error fetching blog post", error: error_3.message });
                 return [3 /*break*/, 4];
             case 4: return [2 /*return*/];
         }
@@ -320,7 +223,7 @@ var getBlogPostById = express_async_handler_1["default"](function (req, res) { r
 exports.getBlogPostById = getBlogPostById;
 // Update a blog post by ID
 var updateBlogPost = express_async_handler_1["default"](function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
-    var id, _a, title, description, updatedMedia_1, blogPost, currentMedia, newMedia, _loop_2, _i, _b, file, _c, currentMedia_1, mediaItem, publicId, updatedPost, error_5;
+    var id, _a, title, description, updatedMedia_1, blogPost, currentMedia, newMedia, _loop_2, _i, _b, file, _c, currentMedia_1, mediaItem, publicId, updatedPost, error_4;
     return __generator(this, function (_d) {
         switch (_d.label) {
             case 0:
@@ -408,8 +311,8 @@ var updateBlogPost = express_async_handler_1["default"](function (req, res, next
                 });
                 return [3 /*break*/, 12];
             case 11:
-                error_5 = _d.sent();
-                next(error_5);
+                error_4 = _d.sent();
+                next(error_4);
                 return [3 /*break*/, 12];
             case 12: return [2 /*return*/];
         }
@@ -418,7 +321,7 @@ var updateBlogPost = express_async_handler_1["default"](function (req, res, next
 exports.updateBlogPost = updateBlogPost;
 // Delete blog post by ID
 var deleteBlogPost = express_async_handler_1["default"](function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
-    var id, blogPost, _i, _a, mediaItem, publicId, error_6;
+    var id, blogPost, _i, _a, mediaItem, publicId, error_5;
     return __generator(this, function (_b) {
         switch (_b.label) {
             case 0:
@@ -453,8 +356,8 @@ var deleteBlogPost = express_async_handler_1["default"](function (req, res, next
                 res.status(200).json({ message: "Blog post deleted successfully" });
                 return [3 /*break*/, 8];
             case 7:
-                error_6 = _b.sent();
-                next(error_6);
+                error_5 = _b.sent();
+                next(error_5);
                 return [3 /*break*/, 8];
             case 8: return [2 /*return*/];
         }
