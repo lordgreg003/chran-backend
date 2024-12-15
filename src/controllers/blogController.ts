@@ -1,79 +1,11 @@
-
 import { Request, RequestHandler, Response } from "express";
 import asyncHandler from "express-async-handler";
-import { BlogPost } from "../model/BlogPost";
+import { BlogPost, MediaItem } from "../model/BlogPost";
 import cloudinary from "../config/cloudinary";
 import * as stream from "stream";
-import fs from "fs";
-import Handbrake from "handbrake-js"; // Import HandBrake-js
-import path from "path";
-import os from "os";
-
-// Define MediaItem type
-type MediaItem = { url: string; type: string };
-
-// Function to save buffer to a temp file
-const saveBufferToTempFile = (buffer: Buffer, extension: string): string => {
-  const tempFilePath = path.join(os.tmpdir(), `${Date.now()}.${extension}`);
-  fs.writeFileSync(tempFilePath, buffer);
-  return tempFilePath;
-};
-
-// Function to compress video
-const compressVideo = async (
-  inputPath: string,
-  outputPath: string
-): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    Handbrake.spawn({
-      input: inputPath,
-      output: outputPath,
-      preset: "Very Fast 1080p30",
-      quality: 20,
-      audio: "aac",
-      width: 1280,
-      rate: 30,
-    })
-      .on("progress", (progress) => {
-        console.log(`Compression progress: ${progress.percentComplete.toFixed(2)}%`);
-      })
-      .on("error", reject)
-      .on("end", resolve);
-  });
-};
-
-// Retry logic for uploading to Cloudinary
-const retryUpload = async (buffer: Buffer, retries = 3): Promise<MediaItem> => {
-  for (let i = 0; i < retries; i++) {
-    try {
-      return await new Promise((resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          {
-            resource_type: "video",
-            folder: "blog_posts",
-            timeout: 120000,
-          },
-          (error, result) => {
-            if (error) {
-              return reject(error);
-            }
-            if (result && result.secure_url && result.resource_type) {
-              resolve({ url: result.secure_url, type: result.resource_type });
-            } else {
-              reject(new Error("Invalid Cloudinary response"));
-            }
-          }
-        );
-        const bufferStream = new stream.PassThrough();
-        bufferStream.end(buffer);
-        bufferStream.pipe(uploadStream);
-      });
-    } catch (error) {
-      console.error(`Upload attempt ${i + 1} failed:`, error);
-    }
-  }
-  throw new Error("Failed to upload to Cloudinary after retries");
-};
+import axios from "axios";
+ 
+ 
 
 const createBlogPost: RequestHandler = asyncHandler(async (req, res) => {
   try {
@@ -81,48 +13,19 @@ const createBlogPost: RequestHandler = asyncHandler(async (req, res) => {
     console.log("Received title:", title);
     console.log("Received description:", description);
 
-    const media: MediaItem[] = [];
+    const media = [];
 
     if (req.files && Array.isArray(req.files)) {
       for (const file of req.files) {
         console.log("Processing file:", file.originalname);
         console.log("File MIME type:", file.mimetype);
 
-        if (file.mimetype.startsWith("video")) {
-          const tempInputFilePath = saveBufferToTempFile(file.buffer, "mp4");
-
-          let compressionMessage = "Video above 100MB will start compressing.";
-          let targetSize = 100 * 1024 * 1024; // Default target size for videos above 100MB (100MB in bytes)
-
-          if (file.size < targetSize) {
-            compressionMessage = "Video below 100MB, compressing.";
-            targetSize = 0; // No target size for videos below 100MB
-          }
-
-          console.log(compressionMessage);
-
-          let tempOutputFilePath = path.join(os.tmpdir(), `${Date.now()}_compressed.mp4`);
-
-          // Start compression (no size target if it's below 100MB)
-          await compressVideo(tempInputFilePath, tempOutputFilePath);
-
-          // Read the compressed video file
-          const compressedVideoBuffer = fs.readFileSync(tempOutputFilePath);
-          
-          // Upload the compressed video to Cloudinary
-          const uploadResult = await retryUpload(compressedVideoBuffer);
-          media.push(uploadResult);
-
-          // Clean up temporary files
-          fs.unlinkSync(tempInputFilePath);
-          fs.unlinkSync(tempOutputFilePath);
-
-        } else {
-          // Handle non-video files (e.g., images)
-          const uploadResult = await new Promise<MediaItem>((resolve, reject) => {
+        // Upload to Cloudinary with resource type auto
+        const uploadResult = await new Promise<{ url: string; type: string }>(
+          (resolve, reject) => {
             const uploadStream = cloudinary.uploader.upload_stream(
               {
-                resource_type: "auto",
+                resource_type: "auto", // Automatically handle images and videos
                 folder: "blog_posts",
                 transformation: file.mimetype.startsWith("image")
                   ? [
@@ -133,21 +36,20 @@ const createBlogPost: RequestHandler = asyncHandler(async (req, res) => {
                         quality: "auto:best",
                       },
                     ]
-                  : undefined,
+                  : undefined, // Optional: Add video transformations if needed
+                  timeout: 60000,
               },
               (error, result) => {
                 if (error) {
                   console.error("Cloudinary upload error:", error);
                   return reject(new Error("Failed to upload to Cloudinary"));
                 }
-                if (result && result.secure_url && result.resource_type) {
+                if (result) {
                   console.log("Cloudinary upload successful, result:", result);
                   resolve({
                     url: result.secure_url,
                     type: result.resource_type,
                   });
-                } else {
-                  reject(new Error("Invalid Cloudinary response"));
                 }
               }
             );
@@ -155,10 +57,11 @@ const createBlogPost: RequestHandler = asyncHandler(async (req, res) => {
             const bufferStream = new stream.PassThrough();
             bufferStream.end(file.buffer);
             bufferStream.pipe(uploadStream);
-          });
+          }
+        );
 
-          media.push(uploadResult);
-        }
+        // Add the uploaded media info to the media array
+        media.push(uploadResult);
       }
     } else {
       console.log("No files uploaded or files array is not an array.");
@@ -173,6 +76,16 @@ const createBlogPost: RequestHandler = asyncHandler(async (req, res) => {
 
     // Save to MongoDB
     const savedPost = await newPost.save();
+
+    // const webhookUrl =
+    //   "https://hook.eu2.make.com/23gt24xaj83x26hf1odsxl92lrji6mrk";
+
+    // // Send data to the webhook
+    // await axios.post(webhookUrl, {
+    //   title,
+    //   description,
+    //   media,
+    // });
 
     // Respond with the created blog post
     res.status(201).json(savedPost);
