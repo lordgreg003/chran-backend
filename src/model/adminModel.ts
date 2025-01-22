@@ -4,6 +4,7 @@ import bcrypt from "bcrypt";
 // Define a TypeScript interface for the Admin model
 interface IAdmin extends Document {
   username: string;
+  
   password: string;
 
   // Method to compare entered password with hashed password
