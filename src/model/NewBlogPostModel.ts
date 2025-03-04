@@ -1,29 +1,107 @@
-import mongoose, { Schema, Document } from "mongoose";
+// import mongoose, { Document, Schema } from "mongoose";
 
-export interface MediaItem {
-  url: string;
-  type: string; // Either "image" or "video"
-}
+// type BlogStatus = "draft" | "published" | "archived";
 
-interface IBlogPost extends Document {
-  title: string;
-  description: string;
-  media: MediaItem[];
-  mediaType: string;
-  createdAt: Date;
-}
+// export interface IBlog extends Document {
+//   title: string;
+//   slug: string;
+//   author: mongoose.Types.ObjectId;
+//   content: string;
+//   description: string;
+//   category?: mongoose.Types.ObjectId;
+//   tags?: mongoose.Types.ObjectId[];
+//   created_at: Date;
+//   updated_at: Date;
+//   published_at?: Date;
+//   status: BlogStatus;
+//   featured_image?: string;
+//   image1?: string;
+//   image2?: string;
+//   image3?: string;
+//   image4?: string;
+//   image5?: string;
+//   image6?: string;
+//   video?: string;
+// }
 
-const BlogPostSchema: Schema = new Schema({
-  title: { type: String, required: true },
-  description: { type: String, required: true },
-  media: [
-    {
-      url: { type: String },
-      type: { type: String }, // Either "image" or "video"
-    },
-  ],
-  mediaType: { type: String },
-  createdAt: { type: Date, default: Date.now },
-});
+// // Blog Schema
+// const BlogSchema: Schema = new Schema<IBlog>({
+//   title: {
+//     type: String,
+//     required: true,
+//     trim: true,
+//   },
+//   description: {
+//     type: String,
+//     required: true,
+//     trim: true,
+//   },
 
-export const BlogPost = mongoose.model<IBlogPost>("BlogPost", BlogPostSchema);
+//   slug: {
+//     type: String,
+//     required: true,
+//     unique: true,
+//     lowercase: true,
+//   },
+//   author: {
+//     type: Schema.Types.ObjectId,
+//     ref: "User",
+//     required: true,
+//   },
+//   content: {
+//     type: String,
+//     required: true,
+//   },
+//   category: {
+//     type: Schema.Types.ObjectId,
+//     ref: "Category",
+//   },
+//   tags: [
+//     {
+//       type: Schema.Types.ObjectId,
+//       ref: "Tag",
+//     },
+//   ],
+//   created_at: {
+//     type: Date,
+//     default: Date.now,
+//   },
+//   updated_at: {
+//     type: Date,
+//     default: Date.now,
+//   },
+//   published_at: {
+//     type: Date,
+//   },
+//   status: {
+//     type: String,
+//     enum: ["draft", "published", "archived"],
+//     default: "draft",
+//   },
+//   featured_image: {
+//     type: String,
+//   },
+//   image1: {
+//     type: String,
+//   },
+//   image2: {
+//     type: String,
+//   },
+//   image3: {
+//     type: String,
+//   },
+//   image4: {
+//     type: String,
+//   },
+//   image5: {
+//     type: String,
+//   },
+//   image6: {
+//     type: String,
+//   },
+//   video: {
+//     type: String,
+//   },
+// });
+
+// export default mongoose.model<IBlog>("Blog", BlogSchema);

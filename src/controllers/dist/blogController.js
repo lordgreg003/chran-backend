@@ -1,4 +1,15 @@
 "use strict";
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -35,42 +46,74 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-var __spreadArrays = (this && this.__spreadArrays) || function () {
-    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
-    for (var r = Array(s), k = 0, i = 0; i < il; i++)
-        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
-            r[k] = a[j];
-    return r;
-};
 exports.__esModule = true;
-exports.deleteBlogPost = exports.updateBlogPost = exports.getBlogPostById = exports.getAllBlogPosts = exports.createBlogPost = void 0;
+exports.deleteBlogPostById = exports.getBlogPostBySlug = exports.getAllBlogPosts = exports.createBlogPost = void 0;
 var express_async_handler_1 = require("express-async-handler");
 var BlogPost_1 = require("../model/BlogPost");
 var cloudinary_1 = require("../config/cloudinary");
 var stream = require("stream");
-var createBlogPost = express_async_handler_1["default"](function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var _a, title, description, media, _loop_1, _i, _b, file, newPost, savedPost, error_1;
-    return __generator(this, function (_c) {
-        switch (_c.label) {
+var slugify_1 = require("slugify");
+// Function to generate a unique slug
+var createUniqueSlug = function (title) { return __awaiter(void 0, void 0, Promise, function () {
+    var baseSlug, slug, randomNumber;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
             case 0:
-                _c.trys.push([0, 8, , 9]);
-                _a = req.body, title = _a.title, description = _a.description;
+                baseSlug = slugify_1["default"](title, { lower: true, strict: true });
+                slug = baseSlug;
+                _a.label = 1;
+            case 1: return [4 /*yield*/, BlogPost_1.BlogPost.findOne({ slug: slug })];
+            case 2:
+                if (!_a.sent()) return [3 /*break*/, 3];
+                randomNumber = Math.floor(Math.random() * 1000000) + 1;
+                slug = baseSlug + "-" + randomNumber;
+                return [3 /*break*/, 1];
+            case 3: return [2 /*return*/, slug];
+        }
+    });
+}); };
+var createBlogPost = express_async_handler_1["default"](function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
+    var _a, title, description, author, status, tags, trimmedStatus, slug, images, files, _loop_1, i, existingPost, newPost, savedPost, error_1;
+    return __generator(this, function (_b) {
+        switch (_b.label) {
+            case 0:
+                _b.trys.push([0, 10, , 11]);
+                _a = req.body, title = _a.title, description = _a.description, author = _a.author, status = _a.status, tags = _a.tags;
+                trimmedStatus = status === null || status === void 0 ? void 0 : status.trim().toLowerCase();
+                if (!["draft", "published"].includes(trimmedStatus)) {
+                    throw new Error("Invalid status value: \"" + status + "\". Must be either \"draft\" or \"published\".");
+                }
                 console.log("Received title:", title);
                 console.log("Received description:", description);
-                media = [];
-                if (!(req.files && Array.isArray(req.files))) return [3 /*break*/, 5];
-                _loop_1 = function (file) {
-                    var uploadResult;
+                console.log("Received author:", author);
+                console.log("Received status:", status);
+                console.log("Received tags:", tags);
+                return [4 /*yield*/, createUniqueSlug(title)];
+            case 1:
+                slug = _b.sent();
+                console.log("Generated unique slug:", slug);
+                images = {
+                    image1: "",
+                    image2: "",
+                    image3: "",
+                    image4: "",
+                    image5: ""
+                };
+                files = req.files;
+                if (!files) return [3 /*break*/, 6];
+                _loop_1 = function (i) {
+                    var fieldName, file_1, uploadResult;
                     return __generator(this, function (_a) {
                         switch (_a.label) {
                             case 0:
-                                console.log("Processing file:", file.originalname);
-                                console.log("File MIME type:", file.mimetype);
+                                fieldName = "image" + i;
+                                if (!(files[fieldName] && files[fieldName][0])) return [3 /*break*/, 2];
+                                file_1 = files[fieldName][0];
                                 return [4 /*yield*/, new Promise(function (resolve, reject) {
                                         var uploadStream = cloudinary_1["default"].uploader.upload_stream({
                                             resource_type: "auto",
                                             folder: "blog_posts",
-                                            transformation: file.mimetype.startsWith("image")
+                                            transformation: file_1.mimetype.startsWith("image")
                                                 ? [
                                                     {
                                                         width: 300,
@@ -79,15 +122,13 @@ var createBlogPost = express_async_handler_1["default"](function (req, res) { re
                                                         quality: "auto:best"
                                                     },
                                                 ]
-                                                : undefined,
-                                            timeout: 60000
+                                                : undefined
                                         }, function (error, result) {
                                             if (error) {
                                                 console.error("Cloudinary upload error:", error);
                                                 return reject(new Error("Failed to upload to Cloudinary"));
                                             }
                                             if (result) {
-                                                console.log("Cloudinary upload successful, result:", result);
                                                 resolve({
                                                     url: result.secure_url,
                                                     type: result.resource_type
@@ -95,233 +136,59 @@ var createBlogPost = express_async_handler_1["default"](function (req, res) { re
                                             }
                                         });
                                         var bufferStream = new stream.PassThrough();
-                                        bufferStream.end(file.buffer);
+                                        bufferStream.end(file_1.buffer);
                                         bufferStream.pipe(uploadStream);
                                     })];
                             case 1:
                                 uploadResult = _a.sent();
-                                // Add the uploaded media info to the media array
-                                media.push(uploadResult);
-                                return [2 /*return*/];
+                                images[fieldName] = uploadResult.url;
+                                _a.label = 2;
+                            case 2: return [2 /*return*/];
                         }
                     });
                 };
-                _i = 0, _b = req.files;
-                _c.label = 1;
-            case 1:
-                if (!(_i < _b.length)) return [3 /*break*/, 4];
-                file = _b[_i];
-                return [5 /*yield**/, _loop_1(file)];
+                i = 1;
+                _b.label = 2;
             case 2:
-                _c.sent();
-                _c.label = 3;
+                if (!(i <= 5)) return [3 /*break*/, 5];
+                return [5 /*yield**/, _loop_1(i)];
             case 3:
-                _i++;
-                return [3 /*break*/, 1];
-            case 4: return [3 /*break*/, 6];
-            case 5:
-                console.log("No files uploaded or files array is not an array.");
-                _c.label = 6;
+                _b.sent();
+                _b.label = 4;
+            case 4:
+                i++;
+                return [3 /*break*/, 2];
+            case 5: return [3 /*break*/, 7];
             case 6:
-                newPost = new BlogPost_1.BlogPost({
-                    title: title,
-                    description: description,
-                    media: media
-                });
-                return [4 /*yield*/, newPost.save()];
-            case 7:
-                savedPost = _c.sent();
-                // const webhookUrl =
-                //   "https://hook.eu2.make.com/23gt24xaj83x26hf1odsxl92lrji6mrk";
-                // // Send data to the webhook
-                // await axios.post(webhookUrl, {
-                //   title,
-                //   description,
-                //   media,
-                // });
-                // Respond with the created blog post
-                res.status(201).json(savedPost);
-                return [3 /*break*/, 9];
+                console.log("No files uploaded.");
+                _b.label = 7;
+            case 7: return [4 /*yield*/, BlogPost_1.BlogPost.findOne({ slug: slug })];
             case 8:
-                error_1 = _c.sent();
+                existingPost = _b.sent();
+                if (existingPost) {
+                    throw new Error("A blog post with the slug \"" + slug + "\" already exists.");
+                }
+                newPost = new BlogPost_1.BlogPost(__assign({ title: title,
+                    description: description,
+                    slug: slug,
+                    author: author, status: trimmedStatus, tags: tags }, images));
+                return [4 /*yield*/, newPost.save()];
+            case 9:
+                savedPost = _b.sent();
+                res.status(200).json(savedPost);
+                return [2 /*return*/];
+            case 10:
+                error_1 = _b.sent();
                 console.error("Error creating blog post:", error_1);
-                res.status(500).json({ error: "Error creating blog post" });
-                return [3 /*break*/, 9];
-            case 9: return [2 /*return*/];
+                next(error_1);
+                return [3 /*break*/, 11];
+            case 11: return [2 /*return*/];
         }
     });
 }); });
 exports.createBlogPost = createBlogPost;
-// Get all blog posts
-var getAllBlogPosts = express_async_handler_1["default"](function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
-    var search, page, limit, skip, query, _a, blogPosts, total, error_2;
-    return __generator(this, function (_b) {
-        switch (_b.label) {
-            case 0:
-                _b.trys.push([0, 2, , 3]);
-                search = req.query.search
-                    ? new RegExp(req.query.search, "i")
-                    : null;
-                page = parseInt(req.query.page, 10) || 1;
-                limit = parseInt(req.query.limit, 10) || 10;
-                skip = (page - 1) * limit;
-                query = search ? { title: { $regex: search } } : {};
-                return [4 /*yield*/, Promise.all([
-                        BlogPost_1.BlogPost.find(query).skip(skip).limit(limit),
-                        BlogPost_1.BlogPost.countDocuments(query),
-                    ])];
-            case 1:
-                _a = _b.sent(), blogPosts = _a[0], total = _a[1];
-                res.status(200).json({
-                    blogPosts: blogPosts,
-                    pagination: {
-                        currentPage: page,
-                        totalPages: Math.ceil(total / limit),
-                        totalItems: total
-                    }
-                });
-                return [3 /*break*/, 3];
-            case 2:
-                error_2 = _b.sent();
-                console.error("Error fetching blog posts:", error_2);
-                res.status(500).json({ message: "Error fetching blog posts" });
-                return [3 /*break*/, 3];
-            case 3: return [2 /*return*/];
-        }
-    });
-}); });
-exports.getAllBlogPosts = getAllBlogPosts;
-// Get a blog post by ID
-var getBlogPostById = express_async_handler_1["default"](function (req, res) { return __awaiter(void 0, void 0, Promise, function () {
-    var id, blogPost, error_3;
-    return __generator(this, function (_a) {
-        switch (_a.label) {
-            case 0:
-                id = req.params.id;
-                _a.label = 1;
-            case 1:
-                _a.trys.push([1, 3, , 4]);
-                return [4 /*yield*/, BlogPost_1.BlogPost.findById(id)];
-            case 2:
-                blogPost = _a.sent();
-                if (!blogPost) {
-                    res.status(404).json({ message: "Blog post not found" });
-                    return [2 /*return*/];
-                }
-                res.status(200).json(blogPost);
-                return [3 /*break*/, 4];
-            case 3:
-                error_3 = _a.sent();
-                res
-                    .status(500)
-                    .json({ message: "Error fetching blog post", error: error_3.message });
-                return [3 /*break*/, 4];
-            case 4: return [2 /*return*/];
-        }
-    });
-}); });
-exports.getBlogPostById = getBlogPostById;
-// Update a blog post by ID
-var updateBlogPost = express_async_handler_1["default"](function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
-    var id, _a, title, description, updatedMedia_1, blogPost, currentMedia, newMedia, _loop_2, _i, _b, file, _c, currentMedia_1, mediaItem, publicId, updatedPost, error_4;
-    return __generator(this, function (_d) {
-        switch (_d.label) {
-            case 0:
-                _d.trys.push([0, 11, , 12]);
-                id = req.params.id;
-                _a = req.body, title = _a.title, description = _a.description, updatedMedia_1 = _a.updatedMedia;
-                return [4 /*yield*/, BlogPost_1.BlogPost.findById(id)];
-            case 1:
-                blogPost = _d.sent();
-                if (!blogPost) {
-                    res.status(404).json({ error: "Blog post not found" });
-                    return [2 /*return*/];
-                }
-                currentMedia = blogPost.media || [];
-                newMedia = [];
-                if (!(req.files && Array.isArray(req.files))) return [3 /*break*/, 5];
-                _loop_2 = function (file) {
-                    var uploadResult;
-                    return __generator(this, function (_a) {
-                        switch (_a.label) {
-                            case 0: return [4 /*yield*/, new Promise(function (resolve, reject) {
-                                    var uploadStream = cloudinary_1["default"].uploader.upload_stream({
-                                        resource_type: "auto",
-                                        folder: "blog_posts"
-                                    }, function (error, result) {
-                                        if (error)
-                                            return reject(error);
-                                        if (result)
-                                            resolve({
-                                                url: result.secure_url,
-                                                type: result.resource_type
-                                            });
-                                    });
-                                    var bufferStream = new stream.PassThrough();
-                                    bufferStream.end(file.buffer);
-                                    bufferStream.pipe(uploadStream);
-                                })];
-                            case 1:
-                                uploadResult = _a.sent();
-                                newMedia.push(uploadResult);
-                                return [2 /*return*/];
-                        }
-                    });
-                };
-                _i = 0, _b = req.files;
-                _d.label = 2;
-            case 2:
-                if (!(_i < _b.length)) return [3 /*break*/, 5];
-                file = _b[_i];
-                return [5 /*yield**/, _loop_2(file)];
-            case 3:
-                _d.sent();
-                _d.label = 4;
-            case 4:
-                _i++;
-                return [3 /*break*/, 2];
-            case 5:
-                _c = 0, currentMedia_1 = currentMedia;
-                _d.label = 6;
-            case 6:
-                if (!(_c < currentMedia_1.length)) return [3 /*break*/, 9];
-                mediaItem = currentMedia_1[_c];
-                if (!!(updatedMedia_1 === null || updatedMedia_1 === void 0 ? void 0 : updatedMedia_1.includes(mediaItem.url))) return [3 /*break*/, 8];
-                publicId = mediaItem.url.split("/").slice(-1)[0].split(".")[0];
-                return [4 /*yield*/, cloudinary_1["default"].uploader.destroy(publicId, {
-                        resource_type: mediaItem.type
-                    })];
-            case 7:
-                _d.sent();
-                _d.label = 8;
-            case 8:
-                _c++;
-                return [3 /*break*/, 6];
-            case 9:
-                // Update blog post
-                blogPost.title = title || blogPost.title;
-                blogPost.description = description || blogPost.description;
-                blogPost.media = __spreadArrays(newMedia, currentMedia.filter(function (media) { return updatedMedia_1 === null || updatedMedia_1 === void 0 ? void 0 : updatedMedia_1.includes(media.url); }));
-                return [4 /*yield*/, blogPost.save()];
-            case 10:
-                updatedPost = _d.sent();
-                res.status(200).json({
-                    message: "Blog post updated successfully",
-                    updatedPost: updatedPost
-                });
-                return [3 /*break*/, 12];
-            case 11:
-                error_4 = _d.sent();
-                next(error_4);
-                return [3 /*break*/, 12];
-            case 12: return [2 /*return*/];
-        }
-    });
-}); });
-exports.updateBlogPost = updateBlogPost;
-// Delete blog post by ID
-var deleteBlogPost = express_async_handler_1["default"](function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
-    var id, blogPost, _i, _a, mediaItem, publicId, error_5;
+var deleteBlogPostById = express_async_handler_1["default"](function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
+    var id, blogPost, _i, _a, mediaItem, publicId, error_2;
     return __generator(this, function (_b) {
         switch (_b.label) {
             case 0:
@@ -356,11 +223,71 @@ var deleteBlogPost = express_async_handler_1["default"](function (req, res, next
                 res.status(200).json({ message: "Blog post deleted successfully" });
                 return [3 /*break*/, 8];
             case 7:
-                error_5 = _b.sent();
-                next(error_5);
+                error_2 = _b.sent();
+                next(error_2);
                 return [3 /*break*/, 8];
             case 8: return [2 /*return*/];
         }
     });
 }); });
-exports.deleteBlogPost = deleteBlogPost;
+exports.deleteBlogPostById = deleteBlogPostById;
+// Get all blog posts with pagination
+var getAllBlogPosts = express_async_handler_1["default"](function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
+    var page, limit, skip, blogPosts, total, error_3;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 3, , 4]);
+                page = parseInt(req.query.page) || 1;
+                limit = parseInt(req.query.limit) || 10;
+                skip = (page - 1) * limit;
+                return [4 /*yield*/, BlogPost_1.BlogPost.find().skip(skip).limit(limit)];
+            case 1:
+                blogPosts = _a.sent();
+                return [4 /*yield*/, BlogPost_1.BlogPost.countDocuments()];
+            case 2:
+                total = _a.sent();
+                res.status(200).json({
+                    blogPosts: blogPosts,
+                    total: total,
+                    page: page,
+                    pages: Math.ceil(total / limit)
+                });
+                return [3 /*break*/, 4];
+            case 3:
+                error_3 = _a.sent();
+                console.error("Error creating blog post:", error_3);
+                next(error_3);
+                return [3 /*break*/, 4];
+            case 4: return [2 /*return*/];
+        }
+    });
+}); });
+exports.getAllBlogPosts = getAllBlogPosts;
+// Get a blog post by slug
+var getBlogPostBySlug = express_async_handler_1["default"](function (req, res, next) { return __awaiter(void 0, void 0, void 0, function () {
+    var slug, blogPost, error_4;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                _a.trys.push([0, 2, , 3]);
+                slug = req.params.slug;
+                return [4 /*yield*/, BlogPost_1.BlogPost.findOne({ slug: slug })];
+            case 1:
+                blogPost = _a.sent();
+                if (!blogPost) {
+                    res.status(404).json({ message: "Blog post not found" });
+                    return [2 /*return*/];
+                }
+                res.status(200).json(blogPost);
+                return [3 /*break*/, 3];
+            case 2:
+                error_4 = _a.sent();
+                console.error("Error creating blog post:", error_4);
+                next(error_4);
+                return [3 /*break*/, 3];
+            case 3: return [2 /*return*/];
+        }
+    });
+}); });
+exports.getBlogPostBySlug = getBlogPostBySlug;
